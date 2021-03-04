@@ -1,0 +1,10 @@
+{
+    "autoload": {
+        "psr-4": {
+            "LocalMeet\\": "app/"
+        }
+    },
+    "require": {
+        "erusev/parsedown": "^1.7"
+    }
+}
