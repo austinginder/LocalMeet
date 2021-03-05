@@ -47,6 +47,15 @@ function localmeet_header_content_extracted() {
 			$output = $output . $match . "\n";
 		}
 	}
+	$localmeet_header_includes = is_array( get_option("localmeet_header_includes" ) ) ? get_option("localmeet_header_includes" ) : [];
+	foreach ( $localmeet_header_includes as $localmeet_header_include ) {
+		preg_match_all("/$local_meet_header_include/", $head, $results );
+		if ( isset( $results ) && $results[0] ) {
+			foreach( $results[0] as $match ) {
+				$output = $output . $match . "\n";
+			}
+		}
+	}
 	echo $output;
 }
 
