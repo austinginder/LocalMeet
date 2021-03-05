@@ -38,7 +38,7 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
 	<v-main>
 	<v-app-bar app class="mb-5" style="left:0px" color="#fff">
 		<v-app-bar-nav-icon @click.stop="drawer = !drawer" class="d-md-none d-lg-none d-xl-none" v-show="route != '' && route != 'start-group' && route != 'find-group'"></v-app-bar-nav-icon>
-		<a href="/" @click.prevent="goToPath( '/')"><v-img src="/wp-content/plugins/localmeet/img/LocalMeet-logo.png" style="max-width: 200px;"></v-img></a>
+		<a href="/" @click.prevent="goToPath( '/')"><v-img src="<?php echo plugins_url(); ?>/localmeet/img/LocalMeet-logo.png" style="max-width: 200px;"></v-img></a>
 		<v-spacer></v-spacer>
 		Self-starting local meetups
 	</v-app-bar>
