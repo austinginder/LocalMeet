@@ -30,6 +30,9 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
 		.theme--light.v-data-table.minimal>.v-data-table__wrapper>table>tbody>tr:hover:not(.v-data-table__expanded__content):not(.v-data-table__empty-wrapper) {
 			background: none;
 		}
+		.event-content ul {
+			padding-bottom: 16px;
+		}
 	</style>
 </head>
 <body>
@@ -313,6 +316,7 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
 	<v-card class="my-5">
 		<v-toolbar color="primary" dark flat>
 			<v-toolbar-title>{{ event.name }}</v-toolbar-title>
+			<v-spacer></v-spacer>
 			<v-dialog max-width="600" v-model="edit_event.show" persistent>
 					<template v-slot:activator="{ on, attrs }">
 						<v-btn icon v-bind="attrs" v-on="on" @click="editEvent()" v-show="user.role == 'administrator' || group.owner"><v-icon large>mdi-pencil-box</v-icon></v-btn>
@@ -391,11 +395,13 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
 					</v-card>
 					</template>
 				</v-dialog>
+			</v-toolbar>
+			<v-toolbar color="grey lighten-3" flat dense>
 			<v-spacer></v-spacer>
 			<v-toolbar-items>
 			<v-menu v-model="attend_menu" :close-on-content-click="false" offset-y >
 				<template v-slot:activator="{ on, attrs }">
-					<v-btn color="primary" tile depressed v-bind="attrs" v-on="on" v-show="event.status == 'upcoming' && user.username">RSVP to attend event <v-icon class="ml-1">mdi-calendar-check<v-icon></v-btn>
+					<v-btn color="grey lighten-3" tile depressed v-bind="attrs" v-on="on" v-show="event.status == 'upcoming' && user.username">RSVP to attend event <v-icon class="ml-1">mdi-calendar-check<v-icon></v-btn>
 				</template>
 				<v-card flat>
 				<v-card-text class="py-0">
@@ -407,9 +413,8 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
 				</v-card>
 			</v-menu>
 			<v-dialog max-width="600" v-model="attend_event.show" persistent>
-				
 				<template v-slot:activator="{ on, attrs }">
-					<v-btn color="primary" tile depressed v-bind="attrs" v-on="on" v-show="event.status == 'upcoming' && ! user.username">RSVP to attend event <v-icon class="ml-1">mdi-calendar-check<v-icon></v-btn>
+					<v-btn color="grey lighten-3" tile depressed v-bind="attrs" v-on="on" v-show="event.status == 'upcoming' && ! user.username">RSVP to attend event <v-icon class="ml-1">mdi-calendar-check<v-icon></v-btn>
 				</template>
 				<template v-slot:default="dialog">
 				<v-card>
@@ -441,30 +446,28 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
 			</v-toolbar-items>
 		</v-toolbar>
 		<v-row>
-			<v-col>
-			<v-list dense class="mb-3">
-				<v-list-item>
-				<v-list-item-icon>
-				<v-icon>mdi-calendar</v-icon>
-				</v-list-item-icon>
-				<v-list-item-content>
-				{{ event.event_at | pretty_timestamp }}
-				</v-list-item-content>
-				</v-list-item>
-				<v-list-item>
-				<v-list-item-icon>
-				<v-icon>mdi-map-marker</v-icon> 
-				</v-list-item-icon>
-				<v-list-item-content>
-				{{ event.location }}
-				</v-list-item-content>
-				</v-list-item>
-			</v-list>
-			
-				<div v-html="event.description"></div>
-
+			<v-col sm="8" cols="12">
+				<v-list dense class="mb-3">
+					<v-list-item>
+					<v-list-item-icon>
+					<v-icon>mdi-calendar</v-icon>
+					</v-list-item-icon>
+					<v-list-item-content>
+					{{ event.event_at | pretty_timestamp }}
+					</v-list-item-content>
+					</v-list-item>
+					<v-list-item>
+					<v-list-item-icon>
+					<v-icon>mdi-map-marker</v-icon> 
+					</v-list-item-icon>
+					<v-list-item-content>
+					{{ event.location }}
+					</v-list-item-content>
+					</v-list-item>
+				</v-list>
+				<v-card-text v-html="event.description" class=""></v-card-text>
 			</v-col>
-			<v-col style="max-width: 290px;">
+			<v-col shrink sm="4" cols="12">
 			<v-subheader v-if="event.status == 'upcoming'">Going</v-subheader>
 			<v-subheader v-if="event.status == 'past'">Went</v-subheader>
 			<v-divider></v-divider>
@@ -506,7 +509,7 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
 			</div>
 			</v-col>
 	</v-card>
-	<v-btn :href="groupHomeLink( group )" @click.prevent="goToPath( groupHomeLink( group ) )" depressed><v-icon class="mr-1">mdi-arrow-left-box</v-icon> All events</v-btn>
+	<v-btn :href="groupHomeLink( group )" @click.prevent="goToPath( groupHomeLink( group ) )" class="my-3"><v-icon class="mr-1">mdi-arrow-left-box</v-icon> All events</v-btn>
 	</div>
 	</v-card>
 	
