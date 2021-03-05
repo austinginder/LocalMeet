@@ -493,6 +493,10 @@ function localmeet_attendee_create_verify_func( $request ) {
                 $user    = (object) [ "ID" => $user_id ];
                 update_user_meta( $user->ID, 'localmeet_password_not_set', true );
             }
+			$rsvp_checks = ( new LocalMeet\Attendees )->where( [ "user_id" => $user->ID, "event_id" => $r->event_id] );
+			foreach( $rsvp_checks as $rsvp_check ) {
+				( new LocalMeet\Attendees )->delete( $rsvp_check->attendee_id );
+			}
             ( new LocalMeet\Attendees )->insert( [
                 "created_at" => $time_now,
 				"event_id"   => $r->event_id,
@@ -500,7 +504,7 @@ function localmeet_attendee_create_verify_func( $request ) {
 				"going"      => true,
             ] );
 
-            ( new LocalMeet\AttendeeRequests )->delete( $request->attendee_request_id );
+            ( new LocalMeet\AttendeeRequests )->delete( $r->attendee_request_id );
 
             // Login as user
             wp_set_current_user( $user->ID, $r->email );
