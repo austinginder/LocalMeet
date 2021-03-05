@@ -3,7 +3,7 @@
 /**
  * Plugin Name:       LocalMeet
  * Plugin URI:        https://localmeet.io
- * Description:       Self-starting local meetup groups
+ * Description:       Self-starting local meetups
  * Version:           1.0.0
  * Author:            Austin Ginder
  * Author URI:        https://austinginder.com
@@ -343,7 +343,7 @@ function localmeet_attendee_create_func( WP_REST_Request $request ) {
 	$event      = ( new LocalMeet\Events )->get( $request->event_id );
 	$event_at   = date('D M jS Y \a\t h:ia', strtotime( $event->event_at ) );
 	$verify_url = home_url() . "/wp-json/localmeet/v1/attendee/create/$token";
-	$subject    = "Local Meet - Confirm your RSVP to '{$event->name}' $event_at";
+	$subject    = "LocalMeet - Confirm your RSVP to '{$event->name}' $event_at";
 	$body       = "Thanks for your interest in '{$event->name}' scheduled for $event_at.<br /><br /><a href=\"{$verify_url}\">Confirm your RSVP</a>.";
 	$headers    = [ 'Content-Type: text/html; charset=UTF-8' ];
 
@@ -384,7 +384,7 @@ function localmeet_groups_create_func( WP_REST_Request $request ) {
         ] );
         
         $verify_url = home_url() . "/wp-json/localmeet/v1/groups/create/$token";
-        $subject    = "Local Meet - Verify new group '{$request->name}'";
+        $subject    = "LocalMeet - Verify new group '{$request->name}'";
         $body       = "Your almost ready to begin your group '{$request->name}'.<br /><br /><a href=\"{$verify_url}\">Verify and create the new group</a>.";
         $headers    = [ 'Content-Type: text/html; charset=UTF-8' ];
 
