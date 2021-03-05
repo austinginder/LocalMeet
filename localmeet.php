@@ -47,16 +47,17 @@ function localmeet_header_content_extracted() {
 			$output = $output . $match . "\n";
 		}
 	}
-	$localmeet_header_includes = is_array( get_option("localmeet_header_includes" ) ) ? get_option("localmeet_header_includes" ) : [];
+	$localmeet_header_includes = is_array( get_option( "localmeet_header_includes" ) ) ? get_option("localmeet_header_includes" ) : [];
 	foreach ( $localmeet_header_includes as $localmeet_header_include ) {
-		preg_match_all("/$local_meet_header_include/", $head, $results );
+		preg_match_all("/$localmeet_header_include/", $head, $results );
+		echo json_encode( $results );
 		if ( isset( $results ) && $results[0] ) {
 			foreach( $results[0] as $match ) {
 				$output = $output . $match . "\n";
 			}
 		}
 	}
-	echo $output;
+	return $output;
 }
 
 function localmeet_enqueue_scripts() {
