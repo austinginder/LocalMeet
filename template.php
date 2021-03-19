@@ -68,8 +68,13 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
         <v-list-item-subtitle><v-btn block depressed>Edit Group <v-icon class="ml-1">mdi-pencil-box</v-icon></v-btn></v-list-item-subtitle>
     </v-list-item-content>
     </v-list-item>
-	
 	</div>
+	<v-list-item v-show="route == 'profile'">
+    <v-list-item-content>
+        <v-list-item-title></v-list-item-title>
+        <v-list-item-subtitle><v-btn block depressed href="/find-group" @click.prevent="goToPath( '/find-group' )"><v-icon class="mr-1">mdi-arrow-left-box</v-icon> All Groups</v-list-item-subtitle>
+    </v-list-item-content>
+    </v-list-item>
     </v-list>
 	<template v-slot:append>
 	<v-list>
@@ -555,13 +560,12 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
 	</v-container>
 	</v-card>
 	<v-card v-if="route == 'profile'" flat tile>
-		<v-toolbar color="grey lighten-4" light flat>
+	<v-card class="my-5" style="max-width: 750px; margin: auto">
+		<v-toolbar color="primary" dark flat>
 			<v-toolbar-title>Edit profile</v-toolbar-title>
 			<v-spacer></v-spacer>
-			<v-toolbar-items>
-			</v-toolbar-items>
 		</v-toolbar>
-		<v-card-text style="max-width:480px">
+		<v-card-text>
 			<v-row>
 				<v-col cols="12">
 				<v-list>
@@ -587,7 +591,9 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
 					<v-alert text :value="true" type="success" v-show="user.success" class="mt-5">{{ user.success }}</v-alert>
 					<v-btn color="primary" dark @click="updateAccount()">Save Account</v-btn>
 				</v-col>
-			</v-layout>
+			</v-row>
+		</v-card-text>
+		</v-card>
 	</v-card>
 	<v-snackbar :timeout="3000" :multi-line="true" v-model="snackbar.show">
 		{{ snackbar.message }}
