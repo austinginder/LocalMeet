@@ -44,6 +44,12 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
 		<a href="/" @click.prevent="goToPath( '/')"><v-img src="<?php echo plugins_url(); ?>/localmeet/img/LocalMeet-logo.png" style="max-width: 200px;"></v-img></a>
 		<v-spacer></v-spacer>
 		Self-starting local meetups
+		<v-snackbar type="info" top absolute centered text persistent value="true" color="primary" timeout="-1" v-show="user.password_not_set && user.password_not_set == true">
+			<a href="/profile" @click.prevent="goToPath( '/profile'); user.password_not_set = false">Password is not set. Click here to create one</a>
+			<template v-slot:action="{ attrs }">
+				<v-btn color="primary" text v-bind="attrs" @click="user.password_not_set = false">Close</v-btn>
+			</template>
+		</v-snackbar>
 	</v-app-bar>
 	<v-navigation-drawer v-model="drawer" mobile-breakpoint="960" app clipped v-if="route != '' && route != 'start-group' && route != 'find-group'">
 	<div v-if="typeof organization.name == 'undefined' && group.name">

@@ -298,6 +298,7 @@ function localmeet_login_func( WP_REST_Request $request ) {
 			if ( is_wp_error( $result ) ) {
 				$errors[] = $result->get_error_message();
 			}
+			delete_user_meta( $user_id, 'localmeet_password_not_set' );
 		}
 
 		if ( count($errors) > 0 ) {

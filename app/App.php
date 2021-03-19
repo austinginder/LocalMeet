@@ -19,6 +19,9 @@ class App {
         "avatar"      => get_avatar_url( $user->user_email, [ "size" => "80" ] ),
         "errors"      => [],
       ];
+      if ( get_user_meta( $user->ID, 'localmeet_password_not_set' ) ) {
+        $record["password_not_set"] = true;
+    }
       return $record;
     }
 

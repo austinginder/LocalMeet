@@ -31,6 +31,9 @@ class User {
             "new_password" => "",
             "errors"       => []
         ];
+        if ( get_user_meta( $this->user_id, 'localmeet_password_not_set' ) ) {
+            $record["password_not_set"] = true;
+        }
         return (object) $record;
     }
 
