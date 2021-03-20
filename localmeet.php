@@ -691,11 +691,17 @@ function localmeet_content() {
 
 	if ( empty( $wp->request ) ) {
 		echo 'LocalMeet is an <a href="https://github.com/austinginder/LocalMeet" target="_new">open source</a> meetup tool powered by WordPress.';
+		echo '<a href="/start-group">Start Group</a>';
+		echo '<a href="/find-group">Find Group</a>';
 		return;
 	}
 
 	if ( $wp->request == "find-group" ) {
+		$groups = ( new LocalMeet\Groups )->all();
 		echo "<h1>Find a group.</h1>";
+		foreach( $groups as $group ) {
+			echo "<a href=\"/group/$group->slug\">$group->name</a>\n";
+		}
 		return;
 	}
 
@@ -759,7 +765,15 @@ function localmeet_content() {
 			$lookup->past = [];
 		}
 		echo "<h1>$lookup->name</h1><h2>$lookup->description</h2>";
-		
+		echo "<h1>Find a group.</h1>\n";
+		echo "<h2>Upcoming Events</h2>\n";
+		foreach( $lookup->upcoming as $event ) {
+			echo "<a href=\"/group/$lookup->slug/$event->slug\">$event->slug</a>\n";
+		}
+		echo "<h2>Past Events</h2>\n";
+		foreach( $lookup->past as $event ) {
+			echo "<a href=\"/group/$lookup->slug/$event->slug\">$event->slug</a>\n";
+		}
 		return;
 	}
 
