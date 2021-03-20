@@ -11,6 +11,7 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
 	<link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
 	<link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+	<meta name="description" content="<?php echo localmeet_meta_description(); ?>" />
 	<?php echo localmeet_header_content_extracted(); ?>
 	<title>LocalMeet</title>
 	<style>
@@ -39,8 +40,13 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
 <div id="app" v-cloak>
     <div><?php localmeet_content(); ?></div>
 </div>
+<?php if ( substr( $_SERVER['SERVER_NAME'], -9) == 'localhost' ) { ?>
 <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+<?php } else { ?>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.js"></script>
+<?php } ?>
 <script src="https://cdn.jsdelivr.net/npm/axios@0.19.0/dist/axios.min.js"></script>
 <script>
 <?php if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { ?>
@@ -58,12 +64,20 @@ var pretty_timestamp_options = {
 }
 
 var prerendered = document.querySelector('#app');
-var elem = document.createElement("div");
+var rendered = document.createElement("div");
 
-axios.get( `<?php echo plugins_url(); ?>/localmeet/template.html` ).then( response => {
-	elem.innerHTML = response.data
-	prerendered.replaceWith( elem )
+fetch( `<?php echo plugins_url(); ?>/localmeet/template.html` ).then( response => {
+	return response.text()
+}).then(function (html) {
+	rendered.innerHTML = html
+	prerendered.replaceWith( rendered )
+	loadVue()
+}).catch(function (err) {
+	// There was an error
+	console.warn('Something went wrong.', err);
+});
 
+function loadVue() {
 new Vue({
 	el: '#app',
 	vuetify: new Vuetify({
@@ -485,8 +499,7 @@ new Vue({
 		},
 	}
 })
-
-})
+}
 </script>
 </body>
 </html>

@@ -685,6 +685,13 @@ function disable_redirection_for_localmeet($redirect_url) {
     return $redirect_url;
 }
 
+function localmeet_meta_description() {
+	global $wp;
+	if ( empty( $wp->request ) ) {
+		echo "Self-starting local meetups";
+		return;
+	}
+}
 
 function localmeet_content() {
 	global $wp;
