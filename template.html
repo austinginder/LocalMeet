@@ -1,0 +1,566 @@
+<div id="app" v-cloak>
+<v-app>
+	<v-main>
+	<v-app-bar app class="mb-5" style="left:0px" color="#fff">
+		<v-app-bar-nav-icon @click.stop="drawer = !drawer" class="d-md-none d-lg-none d-xl-none" v-show="route != '' && route != 'start-group' && route != 'find-group'"></v-app-bar-nav-icon>
+		<a href="/" @click.prevent="goToPath( '/')"><v-img :src=`${plugins_url}/localmeet/img/LocalMeet-logo.png` style="max-width: 200px;"></v-img></a>
+		<v-spacer></v-spacer>
+		Self-starting local meetups
+		<v-snackbar type="info" top absolute centered text persistent value="true" color="primary" timeout="-1" v-show="user.password_not_set && user.password_not_set == true">
+			<a href="/profile" @click.prevent="goToPath( '/profile'); user.password_not_set = false">Password is not set. Click here to create one</a>
+			<template v-slot:action="{ attrs }">
+				<v-btn color="primary" text v-bind="attrs" @click="user.password_not_set = false">Close</v-btn>
+			</template>
+		</v-snackbar>
+	</v-app-bar>
+	<v-navigation-drawer v-model="drawer" mobile-breakpoint="960" app clipped v-if="route != '' && route != 'start-group' && route != 'find-group'">
+	<div v-if="typeof organization.name == 'undefined' && group.name">
+	<v-card-title style="word-break: break-word;">{{ group.name }}</v-card-title>
+	<v-card-text>{{ group.description }}</v-card-text>
+    <v-list>
+	<v-list-item :href="groupHomeLink( group )" @click.prevent="goToPath( groupHomeLink( group ) )">
+    <v-list-item-content>
+        <v-list-item-title>{{ group.past.length + group.upcoming.length  }}</v-list-item-title>
+        <v-list-item-subtitle>Events</v-list-item-subtitle>
+    </v-list-item-content>
+    </v-list-item>
+	<v-list-item v-show="user.role == 'administrator'">
+    <v-list-item-content>
+        <v-list-item-title></v-list-item-title>
+        <v-list-item-subtitle><v-btn block depressed>Edit Group <v-icon class="ml-1">mdi-pencil-box</v-icon></v-btn></v-list-item-subtitle>
+    </v-list-item-content>
+    </v-list-item>
+	</div>
+	<v-list-item v-show="route == 'profile'">
+    <v-list-item-content>
+        <v-list-item-title></v-list-item-title>
+        <v-list-item-subtitle><v-btn block depressed href="/find-group" @click.prevent="goToPath( '/find-group' )"><v-icon class="mr-1">mdi-arrow-left-box</v-icon> All Groups</v-list-item-subtitle>
+    </v-list-item-content>
+    </v-list-item>
+    </v-list>
+	<template v-slot:append>
+	<v-list>
+	<v-list-item v-show="! user.username">
+		<v-list-item-content>
+			<v-dialog max-width="600">
+			<template v-slot:activator="{ on, attrs }">
+				<v-btn v-bind="attrs" v-on="on">Sign In</v-btn>
+			</template>
+			<template v-slot:default="dialog">
+			<v-card>
+				<v-toolbar color="primary" dark>
+					<v-toolbar-title>Sign In</v-toolbar-title>
+					<v-spacer></v-spacer>
+					<v-toolbar-items>
+					<v-btn icon @click="dialog.value = false"><v-icon>mdi-close</v-icon></v-btn>
+					</v-toolbar-items>
+				</v-toolbar>
+				<v-card-text class="mt-5">
+				<v-form v-if="login.lost_password" ref="reset" @keyup.native.enter="resetPassword()">
+					<v-row no-gutters>
+						<v-col cols="12" class="py-0">
+							<v-text-field label="Username or Email" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
+						</v-col>
+						<v-col cols="12" class="py-0">
+							<v-alert text type="success" v-show="login.message">{{ login.message }}</v-alert>
+						</v-col>
+						<v-col cols="12" class="py-0">
+							<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="login.loading"></v-progress-linear>
+							<v-btn color="primary" @click="resetPassword()" :disabled="login.loading">Reset Password</v-btn>
+						</v-col>
+					</v-row>
+					</v-form>
+					<v-form lazy-validation ref="login" @keyup.native.enter="signIn()" v-else>
+					<v-row no-gutters>
+						<v-col cols="12">
+							<v-text-field label="Username or Email" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
+						</v-col>
+						<v-col cols="12">
+							<v-text-field label="Password" :value="login.user_password" @change.native="login.user_password = $event.target.value" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']"></v-text-field>
+						</v-col>
+						<v-col cols="12">
+							<v-alert text type="error" v-show="login.errors">{{ login.errors }}</v-alert>
+						</v-col>
+						<v-col cols="12">
+							<v-progress-linear indeterminate rounded height="6" class="mb-3" v-show="login.loading"></v-progress-linear>
+							<v-btn color="primary" @click="signIn()" :disabled="login.loading">Login</v-btn>
+						</v-col>
+					</v-row>
+					</v-form>
+				</v-card-text>
+			</v-card>
+			</template>
+		</v-dialog>
+		</v-list-item-content>
+	</v-list-item>
+	</v-list>
+	  <v-menu offset-y top>
+      <template v-slot:activator="{ on }">
+		<v-list>
+		<v-list-item link v-on="on" v-show="user.username">
+			<v-list-item-avatar tile>
+				<v-img :src="user.avatar"></v-img>
+			</v-list-item-avatar>
+			<v-list-item-content>
+				<v-list-item-title>{{ user.name }}</v-list-item-title>
+			</v-list-item-content>
+			<v-list-item-icon>
+				<v-icon>mdi-chevron-up</v-icon>
+			</v-list-item-icon>
+		</v-list-item>
+		</v-list>
+      </template>
+      <v-list dense>
+	  	<v-list-item link href="/profile" @click.prevent="goToPath( '/profile' )">
+          <v-list-item-icon>
+            <v-icon>mdi-account-box</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>Profile</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+		<!--<v-list-item link v-if="footer.switch_to_link" :href="footer.switch_to_link">
+          <v-list-item-icon>
+            <v-icon>mdi-logout</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>{{ footer.switch_to_text }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>-->
+	  	<v-list-item link href="/sign-out" @click.prevent="goToPath( '/sign-out' )">
+          <v-list-item-icon>
+            <v-icon>mdi-logout</v-icon>
+          </v-list-item-icon>
+          <v-list-item-content>
+            <v-list-item-title>Log Out</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+      </v-list>
+    </v-menu>
+      </template>
+</v-navigation-drawer>
+
+	<v-card flat v-if="route == ''" class="text-center">
+	
+	<div class="mt-10 mb-5"></div>
+	<v-row class="text-center" style="max-width:600px;margin:auto">
+		<v-col>
+			<v-btn depressed x-large href="/start-group" @click.prevent="goToPath( '/start-group' )" class="mx-auto mt-7">Start a new group</v-btn>
+		</v-col>
+		<v-col>
+			<v-btn depressed x-large href="/find-group" @click.prevent="goToPath( '/find-group' )" class="mx-auto mt-7">Find a group</v-btn>
+		</v-col>
+	</v-row>
+		<v-alert color="primary" text type="info" style="max-width:600px;margin:auto" class="mt-10">LocalMeet is an <a href="https://github.com/austinginder/LocalMeet" target="_new">open source</a> meetup tool powered by WordPress.</v-alert>
+	</v-card>
+	<v-card v-if="route == 'group'" flat>
+		<div v-show="group.name">
+		<v-card class="my-5" style="max-width: 750px; margin: auto">
+		<v-toolbar color="primary" dark flat>
+			<v-toolbar-title>Events</v-toolbar-title>
+			<v-spacer></v-spacer>
+			<v-toolbar-items v-show="user.role == 'administrator' || group.owner">
+				<v-dialog max-width="600" v-model="new_event.show" persistent>
+					<template v-slot:activator="{ on, attrs }">
+						<v-btn icon v-bind="attrs" v-on="on"><v-icon large>mdi-plus-box</v-icon></v-btn>
+					</template>
+					<template v-slot:default="dialog">
+					<v-card>
+						<v-toolbar color="primary" dark>
+							<v-toolbar-title>New Event</v-toolbar-title>
+							<v-spacer></v-spacer>
+							<v-toolbar-items>
+								<v-btn icon @click="dialog.value = false"><v-icon large>mdi-close-box</v-icon></v-btn>
+							<v-toolbar-items>
+						</v-toolbar>
+						<v-card-text>
+							<v-row no-gutters>
+								<v-col class="mt-3">
+									<v-text-field label="Name" v-model="new_event.name" no-details></v-text-field>
+								</v-col>
+							</v-row>
+							<v-row no-gutters>
+								<v-col>
+								<v-menu
+									v-model="new_event.date_selector"
+									:close-on-content-click="false"
+									:nudge-right="40"
+									transition="scale-transition"
+									offset-y
+									min-width="290px"
+								>
+									<template v-slot:activator="{ on, attrs }">
+										<v-text-field label="Date" v-model="new_event.date" prepend-icon="mdi-calendar" v-bind="attrs" v-on="on"></v-text-field>
+									</template>
+									<v-date-picker v-model="new_event.date" @input="new_event.date_selector = false"></v-date-picker>
+								</v-menu>
+								</v-col>
+								<v-col>
+								<v-dialog ref="time_picker" v-model="new_event.time_picker" :return-value.sync="new_event.time" persistent width="290px">
+									<template v-slot:activator="{ on, attrs }">
+									<v-text-field
+										v-model="new_event.time"
+										label="Time"
+										prepend-icon="mdi-clock-outline"
+										readonly
+										v-bind="attrs"
+										v-on="on"
+									></v-text-field>
+									</template>
+									<v-time-picker v-if="new_event.time_picker" v-model="new_event.time" full-width>
+									<v-spacer></v-spacer>
+									<v-btn text color="primary" @click="new_event.time_picker = false">
+										Cancel
+									</v-btn>
+									<v-btn text color="primary" @click="$refs.time_picker.save(new_event.time)">
+										OK
+									</v-btn>
+									</v-time-picker>
+								</v-dialog>
+								</v-col>
+							</v-row>
+							<v-row no-gutters>
+								<v-col>
+									<v-text-field label="Location" v-model="new_event.location"></v-text-field>
+								</v-col>
+							</v-row>
+							<v-row no-gutters>
+								<v-col>
+									<v-textarea auto-grow v-model="new_event.description" label="Description" rows="3"><v-textarea>
+								</v-col>
+							</v-row>
+						</v-card-text>
+						<v-card-actions class="justify-end">
+							<v-btn color="primary" @click="addEvent()">Add Event</v-btn>
+						</v-card-actions>
+					</v-card>
+					</template>
+				</v-dialog>
+			<v-toolbar-items>
+		</v-toolbar>
+		<v-list three-line>
+			<v-subheader><span v-if="group.upcoming && group.upcoming.length > 0" class="mr-1">{{ group.upcoming.length }}</span> Upcoming Events</v-subheader>
+			<div v-show="group.upcoming && group.upcoming.length == 0">
+			<v-list-item>
+			<v-list-item-avatar>
+			<v-icon>mdi-information</v-icon>
+			</v-list-item-avatar>
+			<v-list-item-content>
+				<v-list-item-title>No upcoming events are scheduled.</v-list-item-title>
+				<v-list-item-subtitle>.</v-list-item-subtitle>
+			</v-list-item-content>
+			</v-list-item>
+			</div>
+			<div v-for="event in group.upcoming">
+			<v-list-item :href="groupLink( `${event.slug}` )" @click.prevent="goToPath( groupLink( `${ event.slug }` ) )">
+			<v-list-item-avatar>
+			<v-icon>mdi-calendar</v-icon>
+			</v-list-item-avatar>
+			<v-list-item-content>
+				<v-list-item-title>{{ event.event_at | pretty_timestamp }}</v-list-item-title>
+				<v-list-item-subtitle>{{ event.name }}</v-list-item-subtitle>
+			</v-list-item-content>
+			</v-list-item>
+			</div>
+			<v-subheader v-if="group.past && group.past.length != 0"><span v-show="group.past && group.past.length > 0" class="mr-1">{{ group.past.length }}</span> Past Events</v-subheader>
+			<div v-for="event in group.past">
+			<v-list-item :href="groupLink( `${event.slug}` )" @click.prevent="goToPath( groupLink( `${ event.slug }` ) )">
+			<v-list-item-avatar>
+			<v-icon>mdi-calendar</v-icon>
+			</v-list-item-avatar>
+			<v-list-item-content>
+				<v-list-item-title>{{ event.event_at | pretty_timestamp }}</v-list-item-title>
+				<v-list-item-subtitle>{{ event.name }}</v-list-item-subtitle>
+			</v-list-item-content>
+			</v-list-item>
+			</div>
+		</v-list>
+		</v-card>
+		<v-row v-show="organization.name">
+		<v-col class="text-center">
+			<v-btn text :href=`/${organization.slug}` @click.prevent="goToPath( `/${organization.slug}` )" class="mx-auto mt-7">Back to all groups</v-btn>
+		</v-col>
+		</v-row>
+		</div>
+	</v-card>
+
+	<v-card v-if="route == 'event'" flat tile>
+	<div style="max-width: 750px; margin: auto">
+	<v-card class="my-5">
+		<v-toolbar color="primary" dark flat>
+			<v-toolbar-title>{{ event.name }}</v-toolbar-title>
+			<v-spacer></v-spacer>
+			<v-dialog max-width="600" v-model="edit_event.show" persistent>
+					<template v-slot:activator="{ on, attrs }">
+						<v-btn icon v-bind="attrs" v-on="on" @click="editEvent()" v-show="user.role == 'administrator' || group.owner"><v-icon large>mdi-pencil-box</v-icon></v-btn>
+					</template>
+					<template v-slot:default="dialog">
+					<v-card>
+						<v-toolbar color="primary" dark>
+							<v-toolbar-title>Edit Event</v-toolbar-title>
+							<v-spacer></v-spacer>
+							<v-toolbar-items>
+								<v-btn icon @click="dialog.value = false"><v-icon large>mdi-close-box</v-icon></v-btn>
+							<v-toolbar-items>
+						</v-toolbar>
+						<v-card-text>
+							<v-row no-gutters>
+								<v-col class="mt-3">
+									<v-text-field label="Name" v-model="edit_event.event.name" no-details></v-text-field>
+								</v-col>
+							</v-row>
+							<v-row no-gutters>
+								<v-col>
+								<v-menu
+									v-model="edit_event.date_selector"
+									:close-on-content-click="false"
+									:nudge-right="40"
+									transition="scale-transition"
+									offset-y
+									min-width="290px"
+								>
+									<template v-slot:activator="{ on, attrs }">
+										<v-text-field label="Date" v-model="edit_event.date" prepend-icon="mdi-calendar" v-bind="attrs" v-on="on"></v-text-field>
+									</template>
+									<v-date-picker v-model="edit_event.date" @input="edit_event.date_selector = false"></v-date-picker>
+								</v-menu>
+								</v-col>
+								<v-col>
+								<v-dialog ref="time_picker" v-model="edit_event.time_picker" :return-value.sync="edit_event.time" persistent width="290px">
+									<template v-slot:activator="{ on, attrs }">
+									<v-text-field
+										v-model="edit_event.time"
+										label="Time"
+										prepend-icon="mdi-clock-outline"
+										readonly
+										v-bind="attrs"
+										v-on="on"
+									></v-text-field>
+									</template>
+									<v-time-picker v-if="edit_event.time_picker" v-model="edit_event.time" full-width>
+									<v-spacer></v-spacer>
+									<v-btn text color="primary" @click="edit_event.time_picker = false">
+										Cancel
+									</v-btn>
+									<v-btn text color="primary" @click="$refs.time_picker.save(edit_event.time)">
+										OK
+									</v-btn>
+									</v-time-picker>
+								</v-dialog>
+								</v-col>
+							</v-row>
+							<v-row no-gutters>
+								<v-col>
+									<v-text-field label="Location" v-model="edit_event.event.location"></v-text-field>
+								</v-col>
+							</v-row>
+							<v-row no-gutters>
+								<v-col>
+									<v-textarea auto-grow v-model="edit_event.event.description_raw" label="Description" rows="3"><v-textarea>
+								</v-col>
+							</v-row>
+							<v-alert type="error" v-for="error in edit_event.errors">{{ error }}</v-alert>
+						</v-card-text>
+						<v-card-actions class="justify-end">
+							<v-btn text color="error" @click="deleteEvent()">Delete Event</v-btn>
+							<v-btn color="primary" @click="updateEvent()">Update Event</v-btn>
+						</v-card-actions>
+					</v-card>
+					</template>
+				</v-dialog>
+			</v-toolbar>
+			<v-toolbar color="grey lighten-3" flat dense>
+			<v-spacer></v-spacer>
+			<v-toolbar-items>
+			<v-menu v-model="attend_menu" :close-on-content-click="false" offset-y >
+				<template v-slot:activator="{ on, attrs }">
+					<v-btn color="grey lighten-3" tile depressed v-bind="attrs" v-on="on" v-show="event.status == 'upcoming' && user.username">RSVP to attend event <v-icon class="ml-1">mdi-calendar-check<v-icon></v-btn>
+				</template>
+				<v-card flat>
+				<v-card-text class="py-0">
+				<v-radio-group v-model="attend_selection" @change="attendEvent()">
+					<v-radio label="Going" value="going"></v-radio>
+					<v-radio label="Not Going" value="not-going"></v-radio>
+				</v-radio-group>
+				</v-card-text>
+				</v-card>
+			</v-menu>
+			<v-dialog max-width="600" v-model="attend_event.show" persistent>
+				<template v-slot:activator="{ on, attrs }">
+					<v-btn color="grey lighten-3" tile depressed v-bind="attrs" v-on="on" v-show="event.status == 'upcoming' && ! user.username">RSVP to attend event <v-icon class="ml-1">mdi-calendar-check<v-icon></v-btn>
+				</template>
+				<template v-slot:default="dialog">
+				<v-card>
+					<v-toolbar color="primary" dark>
+						<v-toolbar-title>Attend Event</v-toolbar-title>
+						<v-spacer></v-spacer>
+						<v-toolbar-items>
+						<v-btn icon @click="attend_event.show = false"><v-icon>mdi-close</v-icon></v-btn>
+						</v-toolbar-items>
+					</v-toolbar>
+					<v-card-text class="mt-5">
+						<v-row no-gutters>
+							<v-col><v-text-field v-model="attend_event.first_name" label="First Name" dense class="mb-2"></v-text-field></v-col>
+							<v-col><v-text-field v-model="attend_event.last_name" label="Last Name" dense class="mb-2"></v-text-field></v-col>
+						</v-row>
+						<v-row no-gutters>
+							<v-col><v-text-field v-model="attend_event.email" label="Your Email" style="min-width: 220px" dense class="mb-2"></v-text-field></v-col>
+						</v-row>
+						<v-row no-gutters>
+							<v-col><v-alert type="error" text dense v-for="error in attend_event.errors">{{ error }}</v-alert></v-col>
+						</v-row>
+						<v-row no-gutters>
+							<v-col><v-btn @click=attendEventRequest() color="primary">Confirm attendance</v-btn></v-col>
+						</v-row>
+					</v-card-text>
+				</v-card>
+				</template>
+			</v-dialog>
+			</v-toolbar-items>
+		</v-toolbar>
+		<v-row>
+			<v-col sm="8" cols="12">
+				<v-list dense class="mb-3">
+					<v-list-item>
+					<v-list-item-icon>
+					<v-icon>mdi-calendar</v-icon>
+					</v-list-item-icon>
+					<v-list-item-content>
+					{{ event.event_at | pretty_timestamp }}
+					</v-list-item-content>
+					</v-list-item>
+					<v-list-item>
+					<v-list-item-icon>
+					<v-icon>mdi-map-marker</v-icon> 
+					</v-list-item-icon>
+					<v-list-item-content>
+					{{ event.location }}
+					</v-list-item-content>
+					</v-list-item>
+				</v-list>
+				<v-card-text v-html="event.description" class=""></v-card-text>
+			</v-col>
+			<v-col shrink sm="4" cols="12">
+			<v-subheader v-if="event.status == 'upcoming'">Going</v-subheader>
+			<v-subheader v-if="event.status == 'past'">Went</v-subheader>
+			<v-divider></v-divider>
+			<div v-for="attendee in event.attendees">
+				<v-list-item>
+				<v-list-item-avatar tile>
+					<v-img :src="attendee.avatar"></v-img>
+				</v-list-item-avatar>
+				<v-list-item-content>
+					<v-list-item-title>{{ attendee.name }}</v-list-item-title>
+				</v-list-item-content>
+				<v-list-item-action v-show="attendee.description">
+				<v-tooltip bottom>
+				<template v-slot:activator="{ on, attrs }">
+					<v-icon color="grey lighten-1" v-bind="attrs" v-on="on">mdi-information</v-icon>
+				</template>
+				<span>{{ attendee.description }}</span>
+				</v-tooltip>
+				</v-list-item-action>
+				</v-list-item>
+				<v-divider></v-divider>
+			</div>
+
+			<div v-if="event.status == 'upcoming' && event.attendees_not.length > 0">
+			<v-subheader>Not Going</v-subheader>
+			<v-divider></v-divider>
+			<div v-for="attendee in event.attendees_not">
+				<v-list-item>
+				<v-list-item-avatar tile>
+					<v-img :src="attendee.avatar"></v-img>
+				</v-list-item-avatar>
+				<v-list-item-content>
+					<v-list-item-title>{{ attendee.name }}</v-list-item-title>
+					<v-list-item-subtitle></v-list-item-subtitle>
+				</v-list-item-content>
+				</v-list-item>
+				<v-divider></v-divider>
+			</div>
+			</div>
+			</v-col>
+	</v-card>
+	<v-btn :href="groupHomeLink( group )" @click.prevent="goToPath( groupHomeLink( group ) )" class="my-3"><v-icon class="mr-1">mdi-arrow-left-box</v-icon> All events</v-btn>
+	</div>
+	</v-card>
+	
+	<v-card v-if="route == 'start-group'" class="text-center" flat>
+		<v-container style="max-width: 500px;" class="text-left">
+			<v-text-field label="Group Name" v-model="group_new.name"></v-text-field>
+			<v-text-field label="Owner's email address" v-model="group_new.email" persistent-hint hint="Will send a verification email before group is created."></v-text-field>
+			<v-textarea auto-grow rows="1" label="Description" v-model="group_new.description"></v-textarea>
+			<v-alert type="error" v-for="error in group_new.errors">{{ error }}</v-alert>
+			<v-btn @click="createGroup()">Create group</v-btn>
+		</v-container>
+	</v-card>
+	<v-card flat v-if="route == 'find-group'">
+	<v-container style="max-width: 500px;">
+	<v-text-field label="Find a group." solo v-model="group_search" class="mt-5"></v-text-field>
+	<v-data-table :items="groups" :search="group_search" :headers="[{ text: 'Name', value: 'name' }]" hide-default-header hide-default-footer class="minimal">
+	<template v-slot:body="{ items }">
+        <tbody>
+          <tr v-for="item in items" :key="item.group_id">
+            <td>
+			<v-hover v-slot="{ hover }">
+			<v-card tile class="mx-auto my-3" max-width="500" :elevation="hover ? 5 : 2" :href="groupHomeLink( item )" @click.prevent="goToPath( groupHomeLink( item ) )">
+				<v-card-title>{{ item.name }}</v-card-title>
+				<v-card-text>
+					{{ item.description }}
+				</v-card-text>
+				<v-card-text v-show="item.stats.members || item.stats.events">
+				<span v-if="item.stats.members">{{ item.stats.members }} members</span><span v-show="item.stats.members && item.stats.events">, </span><span v-if="item.stats.events">{{ item.stats.events }} events</span>
+				</v-card-text>
+			</v-card>
+			</v-hover>
+			</td>
+          </tr>
+        </tbody>
+      </template>
+	</v-data-table>
+	</v-container>
+	</v-card>
+	<v-card v-if="route == 'profile'" flat tile>
+	<v-card class="my-5" style="max-width: 750px; margin: auto">
+		<v-toolbar color="primary" dark flat>
+			<v-toolbar-title>Edit profile</v-toolbar-title>
+			<v-spacer></v-spacer>
+		</v-toolbar>
+		<v-card-text>
+			<v-row>
+				<v-col cols="12">
+				<v-list>
+				<v-list-item link href="https://gravatar.com" target="_blank">
+					<v-list-item-avatar tile>
+						<v-img :src="user.avatar"></v-img>
+					</v-list-item-avatar>
+					<v-list-item-content>
+						<v-list-item-title>Edit thumbnail with Gravatar</v-list-item-title>
+					</v-list-item-content>
+					<v-list-item-icon>
+						<v-icon>mdi-open-in-new</v-icon>
+					</v-list-item-icon>
+				</v-list-item>
+				</v-list>
+				<v-text-field :value="user.name" @change.native="user.name = $event.target.value" label="Display Name"></v-text-field>
+				<v-text-field :value="user.username" label="Username" readonly disabled></v-text-field>
+				<v-text-field :value="user.email" @change.native="user.email = $event.target.value" label="Email"></v-text-field>
+				<v-text-field :value="user.new_password" @change.native="user.new_password = $event.target.value" type="password" label="New Password" hint="Leave empty to keep current password." persistent-hint></v-text-field>
+				</v-col>
+				<v-col cols="12" class="mt-3">
+					<v-alert text :value="true" type="error" v-for="error in user.errors" class="mt-5">{{ error }}</v-alert>
+					<v-alert text :value="true" type="success" v-show="user.success" class="mt-5">{{ user.success }}</v-alert>
+					<v-btn color="primary" dark @click="updateAccount()">Save Account</v-btn>
+				</v-col>
+			</v-row>
+		</v-card-text>
+		</v-card>
+	</v-card>
+	<v-snackbar :timeout="3000" :multi-line="true" v-model="snackbar.show">
+		{{ snackbar.message }}
+		<v-btn dark text @click.native="snackbar.show = false">Close</v-btn>
+	</v-snackbar>
+	</v-main>
+</v-app>
+</div>

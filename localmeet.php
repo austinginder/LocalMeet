@@ -684,3 +684,83 @@ function disable_redirection_for_localmeet($redirect_url) {
 	}
     return $redirect_url;
 }
+
+
+function localmeet_content() {
+	global $wp;
+
+	if ( empty( $wp->request ) ) {
+		echo 'LocalMeet is an <a href="https://github.com/austinginder/LocalMeet" target="_new">open source</a> meetup tool powered by WordPress.';
+		return;
+	}
+
+	if ( $wp->request == "find-group" ) {
+		echo "<h1>Find a group.</h1>";
+		return;
+	}
+
+	if ( strpos( $wp->request, "group/" ) !== false && substr_count ( $wp->request , "/" ) == 2 ) {
+		$ids = explode( "/", $wp->request );
+		$group           = $ids[1];
+		$organization_id = 0;
+		$group  = ( new LocalMeet\Groups )->where( [ "slug" => $group, "organization_id" => $organization_id ] );
+		if ( $group && isset( $group[0] ) ) { 
+			$group_id = $group[0]->group_id;
+		}
+		$name   = $ids[2];
+		$lookup = ( new LocalMeet\Events )->where(  [ "slug" => $name, "group_id" => $group_id ] );
+		if ( count( $lookup ) != 1 ) {
+			return new WP_Error( 'not_found', 'Event not found.', [ 'status' => 404 ] );
+		}
+		$lookup   = (object) $lookup[0];
+		$time_now = date("Y-m-d H:i:s");
+		if ( $lookup->event_at > $time_now ) {
+			$lookup->status = "upcoming";
+		}
+		if ( $lookup->event_at < $time_now ) {
+			$lookup->status = "past";
+		}
+		$lookup->description_raw = $lookup->description;
+		$lookup->description     = ( new Parsedown )->text( $lookup->description );
+		$lookup->attendees       = ( new LocalMeet\Attendees )->where( [ "event_id" => $lookup->event_id, "going" => 1 ] );
+		$lookup->attendees_not   = ( new LocalMeet\Attendees )->where( [ "event_id" => $lookup->event_id, "going" => 0 ] );
+		foreach( $lookup->attendees as $key => $attendee ) {
+			$user                      = get_userdata( $attendee->user_id );
+			$attendee->name            = "{$user->first_name} {$user->last_name}";
+			$attendee->avatar          = get_avatar_url( $user->user_email, [ "size" => "80" ] );
+			$lookup->attendees[ $key ] = $attendee;
+		}
+		foreach( $lookup->attendees_not as $key => $attendee ) {
+			$user                      = get_userdata( $attendee->user_id );
+			$attendee->name            = "{$user->first_name} {$user->last_name}";
+			$attendee->avatar          = get_avatar_url( $user->user_email, [ "size" => "80" ] );
+			$lookup->attendees_not[ $key ] = $attendee;
+		}
+		$event_at = ( new DateTime( $lookup->event_at ) )->format('D F j, Y, H:i a');
+		echo "<h1>$lookup->name</h1><h2>$event_at</h2><div>$lookup->description</div>";
+		return;
+	}
+
+	if ( strpos( $wp->request, "group/" ) !== false ) {
+
+		$name         = str_replace( "group/", "", $wp->request );
+		$request      = [ "slug" => $name ];
+		$lookup       = ( new LocalMeet\Groups )->where( $request );
+		if ( count( $lookup ) != 1 ) {
+			echo 'Group not found.';
+		}
+		$lookup = $lookup[0];
+		$lookup->upcoming = ( new LocalMeet\Events )->upcoming( [ "group_id" => $lookup->group_id ] );
+		$lookup->past = ( new LocalMeet\Events )->past( [ "group_id" => $lookup->group_id ] );
+		if ( empty( $lookup->upcoming ) ) {
+			$lookup->upcoming = [];
+		}
+		if ( empty( $lookup->past ) ) {
+			$lookup->past = [];
+		}
+		echo "<h1>$lookup->name</h1><h2>$lookup->description</h2>";
+		
+		return;
+	}
+
+}
