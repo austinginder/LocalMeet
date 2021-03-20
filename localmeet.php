@@ -647,20 +647,30 @@ function localmeet_event_func( $request ) {
 	}
     $lookup->description_raw = $lookup->description;
 	$lookup->description     = ( new Parsedown )->text( $lookup->description );
-    $lookup->attendees       = ( new LocalMeet\Attendees )->where( [ "event_id" => $lookup->event_id, "going" => 1 ] );
-	$lookup->attendees_not   = ( new LocalMeet\Attendees )->where( [ "event_id" => $lookup->event_id, "going" => 0 ] );
-    foreach( $lookup->attendees as $key => $attendee ) {
-        $user                      = get_userdata( $attendee->user_id );
-        $attendee->name            = "{$user->first_name} {$user->last_name}";
-        $attendee->avatar          = get_avatar_url( $user->user_email, [ "size" => "80" ] );
-        $lookup->attendees[ $key ] = $attendee;
-    }
-	foreach( $lookup->attendees_not as $key => $attendee ) {
-        $user                      = get_userdata( $attendee->user_id );
-        $attendee->name            = "{$user->first_name} {$user->last_name}";
-        $attendee->avatar          = get_avatar_url( $user->user_email, [ "size" => "80" ] );
-        $lookup->attendees_not[ $key ] = $attendee;
-    }
+	$going                   = ( new LocalMeet\Attendees )->where( [ "event_id" => $lookup->event_id, "going" => 1 ] );
+	$not_going               = ( new LocalMeet\Attendees )->where( [ "event_id" => $lookup->event_id, "going" => 0 ] );
+	foreach ( $going as $key => $attendee ) {
+		$user             = get_userdata( $attendee->user_id );
+        $attendee->name   = "{$user->first_name} {$user->last_name}";
+        $attendee->avatar = get_avatar_url( $user->user_email, [ "size" => "80" ] );
+        $going[ $key ]    = $attendee;
+	}
+	foreach ( $not_going as $key => $attendee ) {
+		$user              = get_userdata( $attendee->user_id );
+        $attendee->name    = "{$user->first_name} {$user->last_name}";
+        $attendee->avatar  = get_avatar_url( $user->user_email, [ "size" => "80" ] );
+        $not_going[ $key ] = $attendee;
+	}
+
+	array_multisort( 
+		array_column( $going, 'description' ), SORT_DESC,
+		array_column( $going, 'name' ), SORT_ASC,
+		$going
+	);
+		
+    $lookup->attendees     = $going; 
+	$lookup->attendees_not = $not_going;
+
 	return $lookup;
 }
 
