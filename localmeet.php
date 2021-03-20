@@ -703,10 +703,15 @@ function localmeet_content() {
 		return;
 	}
 
+	if ( $wp->request == "start-group" ) {
+		echo "<h1>Start a new group</h1>";
+		return;
+	}
+
 	if ( $wp->request == "find-group" ) {
+		echo "<h1>Find a group</h1>";
 		$groups = ( new LocalMeet\Groups )->all();
-		echo "<h1>Find a group.</h1>";
-		foreach( $groups as $group ) {
+		foreach ( $groups as $group ) {
 			echo "<a href=\"/group/$group->slug\">$group->name</a>\n";
 		}
 		return;
@@ -783,5 +788,8 @@ function localmeet_content() {
 		}
 		return;
 	}
+
+	echo "Page not found.";
+	return;
 
 }

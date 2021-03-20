@@ -346,7 +346,9 @@ new Vue({
 			})
 			.then(response => {
 				this.organization = response.data
-			});
+			}).catch(err => {
+				this.route = "missing"
+			})
 		},
 		addEvent() {
 			this.new_event.group_id = this.group.group_id

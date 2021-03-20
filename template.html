@@ -13,7 +13,7 @@
 			</template>
 		</v-snackbar>
 	</v-app-bar>
-	<v-navigation-drawer v-model="drawer" mobile-breakpoint="960" app clipped v-if="route != '' && route != 'start-group' && route != 'find-group'">
+	<v-navigation-drawer v-model="drawer" mobile-breakpoint="960" app clipped v-if="route != '' && route != 'start-group' && route != 'find-group' && route != 'missing'">
 	<div v-if="typeof organization.name == 'undefined' && group.name">
 	<v-card-title style="word-break: break-word;">{{ group.name }}</v-card-title>
 	<v-card-text>{{ group.description }}</v-card-text>
@@ -141,7 +141,6 @@
 </v-navigation-drawer>
 
 	<v-card flat v-if="route == ''" class="text-center">
-	
 	<div class="mt-10 mb-5"></div>
 	<v-row class="text-center" style="max-width:600px;margin:auto">
 		<v-col>
@@ -485,7 +484,13 @@
 	<v-btn :href="groupHomeLink( group )" @click.prevent="goToPath( groupHomeLink( group ) )" class="my-3"><v-icon class="mr-1">mdi-arrow-left-box</v-icon> All events</v-btn>
 	</div>
 	</v-card>
-	
+
+	<v-card v-if="route == 'missing'" class="text-center" flat>
+		<v-container style="max-width: 500px;">
+			<v-alert type="error" text class="text-left mt-5">Opps, nothing to see here.</v-alert>
+		</v-container>
+	</v-card>
+
 	<v-card v-if="route == 'start-group'" class="text-center" flat>
 		<v-container style="max-width: 500px;" class="text-left">
 			<v-text-field label="Group Name" v-model="group_new.name"></v-text-field>
@@ -495,6 +500,7 @@
 			<v-btn @click="createGroup()">Create group</v-btn>
 		</v-container>
 	</v-card>
+
 	<v-card flat v-if="route == 'find-group'">
 	<v-container style="max-width: 500px;">
 	<v-text-field label="Find a group." solo v-model="group_search" class="mt-5"></v-text-field>
