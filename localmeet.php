@@ -171,6 +171,21 @@ function localmeet_register_rest_endpoints() {
 		]
 	);
 
+	register_rest_route(
+		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/update', [
+			'methods'       => 'POST',
+			'callback'      => 'localmeet_groups_update_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/delete', [
+			'methods'  => 'GET',
+			'callback' => 'localmeet_group_delete_func',
+		]
+	);
+
     register_rest_route(
 		'localmeet/v1', '/organization/(?P<name>[a-zA-Z0-9-]+)', [
 			'methods'  => 'GET',
@@ -367,10 +382,15 @@ function localmeet_groups_create_func( WP_REST_Request $request ) {
 	$post    = json_decode( file_get_contents( 'php://input' ) );
     $request = $post->request;
     $errors  = [];
+	$user    = new LocalMeet\User;
 
     if ( $request->name == "" ) {
         $errors[] = "Group name can't be empty.";
     }
+
+	if ( $user->user_id() != 0 ) {
+		$request->email = $user->fetch()->email;
+	}
 
     if ( ! filter_var( $request->email, FILTER_VALIDATE_EMAIL ) ) {
         $errors[] = "Email address is not valid.";
@@ -441,15 +461,21 @@ function localmeet_event_attend_func( $request ) {
 function localmeet_event_update_func( $request ) {
 	$errors = [];
 	$edit_event = (object) $request['edit_event'];
-	if ( empty( $edit_event->event->name ) ) {
+	$event      = (object) $edit_event->event;
+	if ( empty( $event->name ) ) {
 		$errors[] = "Name can't be empty.";
-	}
-	if ( ! filter_var( $attendee->email, FILTER_VALIDATE_EMAIL ) ) {
-		$errors[] = "Email address is not valid.";
 	}
 	if ( count ( $errors ) > 0 ) {
 		return [ "errors" => $errors ];
 	}
+	( new LocalMeet\Events )->update([
+			"name"        => $event->name,
+			"event_at"    => $event->event_at,
+			"description" => $event->description_raw,
+			"location"    => $event->location,
+			"slug"        => $event->slug,
+		],[ "event_id"    => $event->event_id ]);
+
     return $event_id;
 }
 
@@ -478,6 +504,31 @@ function localmeet_events_create_func( $request ) {
 		"event_id"   => $event_id,
 		"going"      => true,
 	] );
+    return $event_id;
+}
+
+function localmeet_group_delete_func( $request ) {
+	$group = ( new LocalMeet\Groups )->get( $request['group_id'] );
+	if ( empty( $group ) ) {
+		return [ "errors" => [ "Group not found." ] ];
+	}
+	$user  = new LocalMeet\User;
+	if ( ! $user->is_admin() && ! $user->user_id() == $group->owner_id ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	( new LocalMeet\Groups )->delete( $group->group_id );
+	return;
+}
+
+function localmeet_groups_update_func( $request ) {
+	$errors = [];
+	$edit_group = (object) $request['edit_group'];
+	if ( empty( $edit_group->group->name ) ) {
+		$errors[] = "Name can't be empty.";
+	}
+	if ( count ( $errors ) > 0 ) {
+		return [ "errors" => $errors ];
+	}
     return $event_id;
 }
 

@@ -24,10 +24,49 @@
         <v-list-item-subtitle>Events</v-list-item-subtitle>
     </v-list-item-content>
     </v-list-item>
-	<v-list-item v-show="user.role == 'administrator'">
+	<v-list-item v-show="user.role == 'administrator' || group.owner">
     <v-list-item-content>
         <v-list-item-title></v-list-item-title>
-        <v-list-item-subtitle><v-btn block depressed>Edit Group <v-icon class="ml-1">mdi-pencil-box</v-icon></v-btn></v-list-item-subtitle>
+        <v-list-item-subtitle>
+			<v-dialog max-width="600" v-model="edit_group.show" persistent>
+				<template v-slot:activator="{ on, attrs }">
+					<v-btn v-bind="attrs" v-on="on" block depressed @click="editGroup()">Edit Group <v-icon class="ml-1">mdi-pencil-box</v-icon></v-btn>
+				</template>
+				<template v-slot:default="dialog">
+				<v-card>
+					<v-toolbar color="primary" dark>
+						<v-toolbar-title>Edit Group</v-toolbar-title>
+						<v-spacer></v-spacer>
+						<v-toolbar-items>
+							<v-btn icon @click="dialog.value = false"><v-icon large>mdi-close-box</v-icon></v-btn>
+						<v-toolbar-items>
+					</v-toolbar>
+					<v-card-text>
+						<v-row no-gutters>
+							<v-col class="mt-3">
+								<v-text-field label="Name" v-model="edit_group.group.name" no-details></v-text-field>
+							</v-col>
+						</v-row>
+						<v-row no-gutters>
+							<v-col>
+								<v-text-field label="Slug" v-model="edit_group.group.slug" no-details></v-text-field>
+							</v-col>
+						</v-row>
+						<v-row no-gutters>
+							<v-col>
+								<v-textarea auto-grow v-model="edit_group.group.description" label="Description" rows="3"><v-textarea>
+							</v-col>
+						</v-row>
+						<v-alert type="error" v-for="error in edit_group.errors">{{ error }}</v-alert>
+					</v-card-text>
+					<v-card-actions class="justify-end">
+						<v-btn text color="error" @click="deleteGroup()">Delete Group</v-btn>
+						<v-btn color="primary" @click="updateGroup()">Update Group</v-btn>
+					</v-card-actions>
+				</v-card>
+				</template>
+			</v-dialog>
+		</v-list-item-subtitle>
     </v-list-item-content>
     </v-list-item>
 	</div>
@@ -494,7 +533,7 @@
 	<v-card v-if="route == 'start-group'" class="text-center" flat>
 		<v-container style="max-width: 500px;" class="text-left">
 			<v-text-field label="Group Name" v-model="group_new.name"></v-text-field>
-			<v-text-field label="Owner's email address" v-model="group_new.email" persistent-hint hint="Will send a verification email before group is created."></v-text-field>
+			<v-text-field label="Owner's email address" v-model="group_new.email" persistent-hint hint="Will send a verification email before group is created." v-show="! user.username"></v-text-field>
 			<v-textarea auto-grow rows="1" label="Description" v-model="group_new.description"></v-textarea>
 			<v-alert type="error" v-for="error in group_new.errors">{{ error }}</v-alert>
 			<v-btn @click="createGroup()">Create group</v-btn>

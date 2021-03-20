@@ -107,6 +107,7 @@ new Vue({
 		new_event: { show: false, time: "", date: "", time_picker: false, date_selector: false, name: "", location: "", group_id: "", description: "" },
 		edit_event: { show: false, time: "", date: "", time_picker: false, date_selector: false, errors: [], event: {} },
 		attend_event: { show: false, event_id: "", first_name: "", last_name: "", email: "", errors: [] },
+		edit_group: { show: false, errors: [], group: {} },
 		group: {},
 		group_nav: 1,
 		groups: [],
@@ -273,8 +274,14 @@ new Vue({
 		},
 		createGroup() {
 			this.group_new.errors = []
+			headers = {}
+			if ( this.wp_nonce ) {
+				headers['X-WP-Nonce'] = this.wp_nonce
+			}
 			axios.post( '/wp-json/localmeet/v1/groups/create', {
 				'request': this.group_new,
+			},{
+				headers: headers
 			})
 			.then( response => {
 				if ( typeof response.data.errors === 'undefined' || response.data.errors.length == 0 ) {
@@ -368,8 +375,8 @@ new Vue({
 			this.edit_event.time = this.edit_event.event.event_at.substr(11, 8)
 		},
 		updateEvent() {
-			this.new_event.group_id = this.group.group_id
 			event_id = this.edit_event.event.event_id
+			this.edit_event.event.event_at = `${this.edit_event.date} ${this.edit_event.time}`
 			axios.post( `/wp-json/localmeet/v1/event/${event_id}/update`, {
 				'edit_event': this.edit_event
 			},{
@@ -384,8 +391,8 @@ new Vue({
 			})
 		},
 		deleteEvent() {
-			confirm = confirm("Delete event?")
-			if ( ! confirm ) {
+			proceed = confirm("Delete event?")
+			if ( ! proceed ) {
 				return
 			}
 			this.new_event.group_id = this.group.group_id
@@ -427,6 +434,40 @@ new Vue({
 				this.attend_menu = false
 				this.fetchEvent()
 				this.attend_selection = ""
+			})
+		},
+		editGroup() {
+			this.edit_group = { show: false, errors: [], group: {} }
+			this.edit_group.group = JSON.parse ( JSON.stringify ( this.group ) )
+		},
+		updateGroup() {
+			group_id = this.edit_group.group.group_id
+			axios.post( `/wp-json/localmeet/v1/group/${group_id}/update`, {
+				'edit_group': this.edit_group
+			},{
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			}).then( response => {
+				if ( response.data.errors ) {
+					this.edit_group.errors = response.data.errors
+					return
+				}
+				this.fetchGroup()
+				this.edit_group = { show: false, errors: [], group: {} }
+			})
+		},
+		deleteGroup() {
+			proceed = confirm("Delete group? Warning all past events will be deleted.")
+			if ( ! proceed ) {
+				return
+			}
+			axios.get( `/wp-json/localmeet/v1/group/${this.group.group_id}/delete`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			}).then( response => {
+				this.fetchGroups()
+				this.edit_group = { show: false, errors: [], group: {} }
+				this.snackbar.message = "Group has been deleted."
+				this.snackbar.show = true
+				this.goToPath( "/" )
 			})
 		},
 		populateStates() {
