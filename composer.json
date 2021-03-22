@@ -5,6 +5,7 @@
         }
     },
     "require": {
-        "erusev/parsedown": "^1.7"
+        "erusev/parsedown": "^1.7",
+        "spatie/icalendar-generator": "^2.1"
     }
 }
