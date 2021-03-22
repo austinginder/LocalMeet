@@ -38,7 +38,7 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
 </head>
 <body>
 <div id="app" server-rendered="true" v-cloak>
-	<?php localmeet_content(); ?>
+	<div><?php localmeet_content(); ?></div>
 </div>
 <div id="app-template" v-cloak>
 <?php echo file_get_contents( plugin_dir_path(__FILE__) . "template.html" ) ?>
