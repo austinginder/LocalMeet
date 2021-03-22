@@ -37,8 +37,11 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
 	</style>
 </head>
 <body>
-<div id="app" v-cloak>
-    <div><?php localmeet_content(); ?></div>
+<div id="app" server-rendered="true" v-cloak>
+	<?php localmeet_content(); ?>
+</div>
+<div id="app-template" v-cloak>
+<?php echo file_get_contents( plugin_dir_path(__FILE__) . "template.html" ) ?>
 </div>
 <?php if ( substr( $_SERVER['SERVER_NAME'], -9) == 'localhost' ) { ?>
 <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
@@ -63,21 +66,13 @@ var pretty_timestamp_options = {
     day: "numeric", hour: "2-digit", minute: "2-digit"
 }
 
-var prerendered = document.querySelector('#app');
-var rendered = document.createElement("div");
+var prerendered = document.querySelector('#app')
+var rendered = document.querySelector('#app-template')
 
-fetch( `<?php echo plugins_url(); ?>/localmeet/template.html` ).then( response => {
-	return response.text()
-}).then(function (html) {
-	rendered.innerHTML = html
-	prerendered.replaceWith( rendered )
-	loadVue()
-}).catch(function (err) {
-	// There was an error
-	console.warn('Something went wrong.', err);
-});
+//rendered.innerHTML = html
+prerendered.replaceWith( rendered )
+rendered.id = "app"
 
-function loadVue() {
 new Vue({
 	el: '#app',
 	vuetify: new Vuetify({
@@ -542,7 +537,6 @@ new Vue({
 		},
 	}
 })
-}
 </script>
 </body>
 </html>
