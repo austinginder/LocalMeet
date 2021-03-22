@@ -142,13 +142,6 @@ class DB {
         $results = array_column( $wpdb->get_results( $sql ), $field );
         return $results;
     }
-    
-    static function select_all( $field = "site_id" ) {
-        global $wpdb;
-        $sql = "SELECT $field FROM " . self::_table() . " order by `created_at` DESC";
-        $results = array_column( $wpdb->get_results( $sql ), $field );
-        return $results;
-    }
 
     // Perform LocalMeet database upgrades by running `LocalMeet\DB::upgrade();`
     public static function upgrade( $force = false ) {
@@ -208,6 +201,15 @@ class DB {
             event_at datetime NOT NULL,
             created_at datetime NOT NULL,
         PRIMARY KEY  (event_id)
+        ) $charset_collate;";
+
+        $sql .= "CREATE TABLE `{$wpdb->base_prefix}localmeet_members` (
+            member_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) UNSIGNED,
+            group_id bigint(20) UNSIGNED,
+            active boolean,
+            created_at datetime NOT NULL,
+        PRIMARY KEY  (member_id)
         ) $charset_collate;";
 
         $sql .= "CREATE TABLE `{$wpdb->base_prefix}localmeet_attendees` (
