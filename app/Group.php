@@ -8,6 +8,26 @@ class Group {
         $this->group_id = $group_id;
     }
 
+    public function fetch() {
+        $group           = ( new Groups )->get( $this->group_id );
+        $group->members  = self::members();
+        $group->upcoming = ( new Events )->upcoming( [ "group_id" => $this->group_id ] );
+        $group->past     = ( new Events )->past( [ "group_id" => $this->group_id ] );
+        if ( empty( $group->upcoming ) ) {
+            $group->upcoming = [];
+        }
+        if ( empty( $group->past ) ) {
+            $group->past = [];
+        }
+        $user = ( new User )->fetch();
+        if ( $user->user_id != 0 && $user->user_id == $group->owner_id ) {
+            $group->owner = true;
+        }
+        unset( $group->owner_id );
+        unset( $group->created_at );
+        return $group;
+    }
+
     public function generate_unique_event_slug( $text ) {
 
         $event_slugs = array_column( self::events(), "slug" );

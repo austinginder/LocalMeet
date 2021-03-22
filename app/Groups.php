@@ -7,7 +7,6 @@ class Groups extends DB {
     static $primary_key = 'group_id';
 
     public function generate_unique_slug( $text ) {
-        
         $valid_slug = false;
         $modifier   = "";
         

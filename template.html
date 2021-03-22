@@ -327,9 +327,11 @@
 		<v-toolbar color="primary" dark flat>
 			<v-toolbar-title>{{ event.name }}</v-toolbar-title>
 			<v-spacer></v-spacer>
+			<v-toolbar-items v-show="user.role == 'administrator' || group.owner">
+			<v-btn icon @click="editEvent()"><v-icon large>mdi-bullhorn</v-icon></v-btn>
 			<v-dialog max-width="600" v-model="edit_event.show" persistent>
 					<template v-slot:activator="{ on, attrs }">
-						<v-btn icon v-bind="attrs" v-on="on" @click="editEvent()" v-show="user.role == 'administrator' || group.owner"><v-icon large>mdi-pencil-box</v-icon></v-btn>
+						<v-btn icon v-bind="attrs" v-on="on" @click="editEvent()"><v-icon large>mdi-pencil-box</v-icon></v-btn>
 					</template>
 					<template v-slot:default="dialog">
 					<v-card>
@@ -405,8 +407,9 @@
 					</v-card>
 					</template>
 				</v-dialog>
+				</v-toolbar-items>
 			</v-toolbar>
-			<v-toolbar color="grey lighten-3" flat dense>
+			<v-toolbar color="grey lighten-3" flat dense v-show="event.status == 'upcoming'">
 			<v-spacer></v-spacer>
 			<v-toolbar-items>
 			<v-menu v-model="attend_menu" :close-on-content-click="false" offset-y >

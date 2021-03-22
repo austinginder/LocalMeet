@@ -476,7 +476,7 @@ function localmeet_event_update_func( $request ) {
 			"slug"        => $event->slug,
 		],[ "event_id"    => $event->event_id ]);
 
-    return $event_id;
+    return $event->event_id;
 }
 
 function localmeet_events_create_func( $request ) {
@@ -523,13 +523,19 @@ function localmeet_group_delete_func( $request ) {
 function localmeet_groups_update_func( $request ) {
 	$errors = [];
 	$edit_group = (object) $request['edit_group'];
-	if ( empty( $edit_group->group->name ) ) {
+	$group      = (object) $edit_group->group;
+	if ( empty( $group->name ) ) {
 		$errors[] = "Name can't be empty.";
 	}
 	if ( count ( $errors ) > 0 ) {
 		return [ "errors" => $errors ];
 	}
-    return $event_id;
+    ( new LocalMeet\Groups )->update([
+		"name"        => $group->name,
+		"description" => $group->description,
+		"slug"        => $group->slug,
+	],[ "group_id"    => $group->group_id ]);
+	return $group->group_id;
 }
 
 function localmeet_attendee_create_verify_func( $request ) {
@@ -688,22 +694,8 @@ function localmeet_group_func( $request ) {
     if ( count( $lookup ) != 1 ) {
         return new WP_Error( 'not_found', 'Group not found.', [ 'status' => 404 ] );
     }
-    $lookup = $lookup[0];
-    $lookup->upcoming = ( new LocalMeet\Events )->upcoming( [ "group_id" => $lookup->group_id ] );
-    $lookup->past = ( new LocalMeet\Events )->past( [ "group_id" => $lookup->group_id ] );
-    if ( empty( $lookup->upcoming ) ) {
-        $lookup->upcoming = [];
-    }
-    if ( empty( $lookup->past ) ) {
-        $lookup->past = [];
-    }
-	$user = ( new LocalMeet\User )->fetch();
-	if ( $user->user_id == $lookup->owner_id ) {
-		$lookup->owner = true;
-	}
-	unset( $lookup->owner_id );
-	unset( $lookup->created_at );
-	return $lookup;
+    $group = ( new LocalMeet\Group( $lookup[0]->group_id ) )->fetch();
+	return $group;
 }
 
 function localmeet_organization_func( $request ) {
