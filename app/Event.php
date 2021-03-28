@@ -19,7 +19,7 @@ class Event {
             $event->status = "past";
         }
         $event->description_raw = $event->description;
-        $event->description     = ( new \Parsedown )->text( $event->description );            
+        $event->description     = ( new \Parsedown )->text( $event->description );
         $event->attendees       = self::going(); 
         $event->attendees_not   = self::not_going();
         return $event;

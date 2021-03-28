@@ -532,7 +532,7 @@ function localmeet_groups_update_func( $request ) {
 	}
     ( new LocalMeet\Groups )->update([
 		"name"        => $group->name,
-		"description" => $group->description,
+		"description" => $group->description_raw,
 		"slug"        => $group->slug,
 	],[ "group_id"    => $group->group_id ]);
 	return $group->group_id;

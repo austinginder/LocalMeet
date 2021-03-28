@@ -23,6 +23,8 @@ class Group {
         if ( $user->user_id != 0 && $user->user_id == $group->owner_id ) {
             $group->owner = true;
         }
+        $group->description_raw = $group->description;
+        $group->description     = ( new \Parsedown )->text( $group->description );
         unset( $group->owner_id );
         unset( $group->created_at );
         return $group;

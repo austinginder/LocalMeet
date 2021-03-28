@@ -15,7 +15,7 @@
 	<v-navigation-drawer v-model="drawer" mobile-breakpoint="960" app clipped v-if="route != '' && route != 'start-group' && route != 'find-group' && route != 'missing'">
 	<div v-if="typeof organization.name == 'undefined' && group.name">
 	<v-card-title style="word-break: break-word;">{{ group.name }}</v-card-title>
-	<v-card-text>{{ group.description }}</v-card-text>
+	<v-card-text v-html="group.description"></v-card-text>
     <v-list>
 	<v-list-item :href="groupHomeLink( group )" @click.prevent="goToPath( groupHomeLink( group ) )">
     <v-list-item-content>
@@ -53,7 +53,7 @@
 						</v-row>
 						<v-row no-gutters>
 							<v-col>
-								<v-textarea auto-grow v-model="edit_group.group.description" label="Description" rows="3"><v-textarea>
+								<v-textarea auto-grow v-model="edit_group.group.description_raw" label="Description" rows="3"><v-textarea>
 							</v-col>
 						</v-row>
 						<v-alert type="error" v-for="error in edit_group.errors">{{ error }}</v-alert>

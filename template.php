@@ -60,7 +60,6 @@ wc_address_i18n_params = <?php echo json_encode( WC()->countries->get_country_lo
 wc_countries = []
 wc_states = []
 <?php } ?>
-// Example: new Date("2018-06-18 19:44:47").toLocaleTimeString("en-us", options); Returns: "Monday, Jun 18, 2018, 7:44 PM"
 var pretty_timestamp_options = {
     weekday: "short", year: "numeric", month: "short",
     day: "numeric", hour: "2-digit", minute: "2-digit"
@@ -69,7 +68,6 @@ var pretty_timestamp_options = {
 var prerendered = document.querySelector('#app')
 var rendered = document.querySelector('#app-template')
 
-//rendered.innerHTML = html
 prerendered.replaceWith( rendered )
 rendered.id = "app"
 
