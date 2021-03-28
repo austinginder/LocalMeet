@@ -30,6 +30,8 @@ class Groups extends DB {
             unset( $group->created_at );
             unset( $group->owner_id );
             unset( $group->details );
+            $group->description_raw = $group->description;
+            $group->description     = ( new \Parsedown )->text( $group->description );
             $group->stats = empty( $details->stats ) ? (object) [] : $details->stats;
             if ( empty( $group->stats->members ) ) {
                 $group->stats->members = 0;
