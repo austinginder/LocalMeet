@@ -185,7 +185,6 @@ new Vue({
 			}
 			this.route = this.routes[ href ]
 			if ( typeof this.route == 'undefined' ) {
-				
 				if ( page_depth == 1 ) {
 					this.route = "organization"
 				}
@@ -237,7 +236,6 @@ new Vue({
 				this.organization = {}
 			}
 			if ( this.route == "group" ) {
-				this.group = {}
 				if ( organization == "group" ) {
 					this.organization = {}
 				}
