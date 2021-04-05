@@ -462,7 +462,7 @@
 			</v-toolbar-items>
 		</v-toolbar>
 		<v-row>
-			<v-col sm="8" cols="12">
+			<v-col sm="8" cols="12" class="event">
 				<v-list dense class="mb-3">
 					<v-list-item>
 					<v-list-item-icon>
@@ -481,7 +481,7 @@
 					</v-list-item-content>
 					</v-list-item>
 				</v-list>
-				<v-card-text v-html="event.description" class=""></v-card-text>
+				<v-card-text v-html="event.description" class="py-0"></v-card-text>
 			</v-col>
 			<v-col shrink sm="4" cols="12">
 			<v-subheader v-if="event.status == 'upcoming'">Going</v-subheader>

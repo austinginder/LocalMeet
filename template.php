@@ -31,8 +31,8 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
 		.theme--light.v-data-table.minimal>.v-data-table__wrapper>table>tbody>tr:hover:not(.v-data-table__expanded__content):not(.v-data-table__empty-wrapper) {
 			background: none;
 		}
-		.event-content ul {
-			padding-bottom: 16px;
+		.event p {
+			margin: 16px 0px;
 		}
 	</style>
 </head>
