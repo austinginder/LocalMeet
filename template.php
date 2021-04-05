@@ -97,6 +97,7 @@ new Vue({
 		attend_menu: "",
 		attend_selection: "",
 		event: {},
+		event_loading: true,
 		new_event: { show: false, time: "", date: "", time_picker: false, date_selector: false, name: "", location: "", group_id: "", description: "" },
 		edit_event: { show: false, time: "", date: "", time_picker: false, date_selector: false, errors: [], event: {} },
 		attend_event: { show: false, event_id: "", first_name: "", last_name: "", email: "", errors: [] },
@@ -192,6 +193,7 @@ new Vue({
 					this.route = "group"
 				}
 				if ( page_depth == 3 ) {
+					this.event_loading = true
 					this.route = "event"
 				}
 			}
@@ -302,7 +304,10 @@ new Vue({
 			})
 			.then(response => {
 				this.event = response.data
-			});
+				this.event_loading = false
+			}).catch(err => {
+				this.route = "missing"
+			})
 		},
 		fetchGroups() {
 			headers = {}
