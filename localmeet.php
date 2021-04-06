@@ -180,6 +180,38 @@ function localmeet_register_rest_endpoints() {
 	);
 
 	register_rest_route(
+		'localmeet/v1', '/group/join/(?P<token>[a-zA-Z0-9-]+)', [
+			'methods'       => 'GET',
+			'callback'      => 'localmeet_groups_join_verify_func',
+            'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/join', [
+			'methods'       => 'GET',
+			'callback'      => 'localmeet_groups_join_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/join', [
+			'methods'       => 'POST',
+			'callback'      => 'localmeet_groups_join_request_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/leave', [
+			'methods'       => 'GET',
+			'callback'      => 'localmeet_groups_leave_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
 		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/delete', [
 			'methods'  => 'GET',
 			'callback' => 'localmeet_group_delete_func',
@@ -518,6 +550,112 @@ function localmeet_group_delete_func( $request ) {
 	}
 	( new LocalMeet\Groups )->delete( $group->group_id );
 	return;
+}
+
+function localmeet_groups_join_verify_func( $request ) {
+	$time_now = date("Y-m-d H:i:s");
+	$token    = $request['token'];
+    $request  = ( new LocalMeet\MemberRequests )->where( [ "token" => $token ] );
+	
+    if ( $request ) {
+        foreach( $request as $r ) {
+			$group = ( new LocalMeet\Groups )->get( $r->group_id );
+            $user  = get_user_by( 'email', $r->email );
+            if ( ! $user ) {
+                $new_user = [
+					"first_name" => $r->first_name,
+					"last_name"  => $r->last_name,
+                    'user_email' => $r->email,
+                    'user_login' => $r->email,
+                    'role'       => 'subscriber'
+                ];
+                $user_id = wp_insert_user( $new_user );
+                $user    = (object) [ "ID" => $user_id ];
+                update_user_meta( $user->ID, 'localmeet_password_not_set', true );
+            }
+			$member_checks = ( new LocalMeet\Members )->where( [ "user_id" => $user->ID, "group_id" => $r->group_id ] );
+			if ( ! empty( $member_checks ) ) {
+				foreach ( $member_checks as $member_check ) {
+					( new LocalMeet\Members )->update( [ "active" => true ], [ "member_id" => $member_check->member_id ] );
+				}
+			}
+			if ( empty( $member_checks ) ) {
+				( new LocalMeet\Members )->insert( [
+					"created_at" => $time_now,
+					"group_id"   => $r->group_id,
+					"user_id"    => $user->ID,
+					"active"     => true,
+				] );
+			}
+
+            ( new LocalMeet\MemberRequests )->delete( $r->member_request_id );
+
+            // Login as user
+            wp_set_current_user( $user->ID, $r->email );
+	        wp_set_auth_cookie( $user->ID );
+
+            wp_redirect( "/group/{$group->slug}?joined=confirmed" );
+            exit();
+        }
+    }
+}
+
+function localmeet_groups_join_func( $request ) {
+	( new LocalMeet\Group( $request['group_id'] ) )->join();
+	return;
+}
+
+function localmeet_groups_leave_func( $request ) {
+	( new LocalMeet\Group( $request['group_id'] ) )->leave();
+	return;
+}
+
+function localmeet_groups_join_request_func( $request ) {
+	$group_id    = $request['group_id'];
+	$request     = (object) $request['request'];
+	$errors      = [];
+	$time_now    = date("Y-m-d H:i:s");
+	$valid_token = false;
+
+	if ( $request->first_name == "" ) {
+		$errors[] = "First name can't be empty.";
+	}
+	if ( $request->last_name == "" ) {
+		$errors[] = "Last name can't be empty.";
+	}
+	if ( ! filter_var( $request->email, FILTER_VALIDATE_EMAIL ) ) {
+		$errors[] = "Email address is not valid.";
+	}
+	if ( count( $errors ) > 0 ) {
+		return [ "errors" => $errors ];
+	}
+
+	do {
+		$token       = bin2hex( openssl_random_pseudo_bytes( 16 ) );
+		$token_check = ( new LocalMeet\MemberRequests )->where( [ "token" => $token ] );
+		if ( ! $token_check ) {
+			$valid_token = true;
+		}
+	} while ( $valid_token == false );
+	
+	( new LocalMeet\MemberRequests )->insert( [
+		"created_at" => $time_now,
+		"group_id"   => $group_id,
+		"first_name" => $request->first_name,
+		"last_name"  => $request->last_name,
+		"email"      => $request->email,
+		"token"      => $token,
+	] );
+
+	$group      = ( new LocalMeet\Groups )->get( $group_id );
+	$verify_url = home_url() . "/wp-json/localmeet/v1/group/join/$token";
+	$subject    = "LocalMeet - Confirm joining group '{$group->name}'";
+	$body       = "Thanks for your interest in joining '{$group->name}'.<br /><br /><a href=\"{$verify_url}\">Confirm joining group</a>.";
+	$headers    = [ 'Content-Type: text/html; charset=UTF-8' ];
+
+	// Send email
+	wp_mail( $request->email, $subject, $body, $headers );
+	return $request;
 }
 
 function localmeet_groups_update_func( $request ) {

@@ -10,7 +10,8 @@ class Group {
 
     public function fetch() {
         $group           = ( new Groups )->get( $this->group_id );
-        $group->members  = self::members();
+        $group->members  = self::members_list();
+        $member_ids      = array_column( self::members(), "user_id" );
         $group->upcoming = ( new Events )->upcoming( [ "group_id" => $this->group_id ] );
         $group->past     = ( new Events )->past( [ "group_id" => $this->group_id ] );
         if ( empty( $group->upcoming ) ) {
@@ -23,8 +24,14 @@ class Group {
         if ( $user->user_id != 0 && $user->user_id == $group->owner_id ) {
             $group->owner = true;
         }
+        if ( $user->user_id != 0 && in_array( $user->user_id, $member_ids ) ) {
+            $group->is_member = true;
+        } else {
+            $group->is_member = false;
+        }
         $group->description_raw = $group->description;
         $group->description     = ( new \Parsedown )->text( $group->description );
+        $group->show            = "list";
         unset( $group->owner_id );
         unset( $group->created_at );
         return $group;
@@ -63,11 +70,64 @@ class Group {
         return $members;
     }
 
+    public function members_list() {
+        $members = ( new Members )->where( [ "group_id" => $this->group_id, "active" => 1 ] );
+        $list    = [];
+        foreach( $members as $member ) {
+            $user = get_user_by( 'ID', $member->user_id );
+            $list[] = [
+                "created_at" => $member->created_at,
+                "first_name" => $user->first_name,
+                "last_name"  => $user->last_name,
+                "avatar"     => get_avatar_url( $user->user_email, [ "size" => "80" ] ),
+            ];
+        }
+        return $list;
+    }
+
+    public function join() {
+        $user_id  = ( new User )->user_id();
+        $time_now = date("Y-m-d H:i:s");
+        if ( empty( $user_id ) ) {
+            return;
+        }
+        $lookup = ( new Members )->where( [ "user_id" => $user_id, "group_id" => $this->group_id ] );
+        if ( ! empty( $lookup ) ) {
+            foreach( $lookup as $membership ) {
+                ( new Members )->update( [ "active" => 1 ], [ "member_id" => $membership->member_id ] );
+            }
+            return;
+        }
+        $membership = [
+            "created_at" => $time_now,
+            "user_id"    => $user_id,
+            "group_id"   => $this->group_id,
+            "active"     => 1,
+        ];
+        ( new Members )->insert( $membership );
+    }
+    public function leave() {
+        $user_id  = ( new User )->user_id();
+        $time_now = date("Y-m-d H:i:s");
+        if ( empty( $user_id ) ) {
+            return;
+        }
+        $lookup = ( new Members )->where( [ "user_id" => $user_id, "group_id" => $this->group_id ] );
+        if ( ! empty( $lookup ) ) {
+            foreach( $lookup as $membership ) {
+                ( new Members )->update( [ "active" => 0 ], [ "member_id" => $membership->member_id ] );
+            }
+            return;
+        }
+    }
+
     public function import_members( $members = [] ) {
         foreach( $members as $member ) {
             $member  = (object) $member;
             $user    = get_user_by( 'email', $member->email );
-            $user_id = $user->ID;
+            if ( $user ) {
+                $user_id = $user->ID;
+            }
             if ( ! $user ) {
                 $new_user = [
                     "first_name" => $member->first_name,
@@ -80,14 +140,19 @@ class Group {
             }
             $lookup = ( new Members )->where( [ "user_id" => $user_id, "group_id" => $this->group_id ] );
             if ( ! empty( $lookup ) ) {
-                return;
+                echo "Already added";
+                continue;
             }
-            ( new Members )->insert( [ 
+            $membership = [
                 "user_id"  => $user_id,
                 "group_id" => $this->group_id,
                 "active"   => 1,
-            ] );
+            ];
+            if ( ! empty( $member->joined ) ) {
+                $membership["created_at"] = date( 'Y-m-d 12:00:00', strtotime( $member->joined ) );
+            }
+            ( new Members )->insert( $membership );
         }
     }
-    
+
 }

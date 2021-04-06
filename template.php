@@ -60,14 +60,9 @@ wc_address_i18n_params = <?php echo json_encode( WC()->countries->get_country_lo
 wc_countries = []
 wc_states = []
 <?php } ?>
-var pretty_timestamp_options = {
-    weekday: "short", year: "numeric", month: "short",
-    day: "numeric", hour: "2-digit", minute: "2-digit"
-}
 
 var prerendered = document.querySelector('#app')
 var rendered = document.querySelector('#app-template')
-
 prerendered.replaceWith( rendered )
 rendered.id = "app"
 
@@ -103,6 +98,7 @@ new Vue({
 		attend_event: { show: false, event_id: "", first_name: "", last_name: "", email: "", errors: [] },
 		edit_group: { show: false, errors: [], group: {} },
 		group: {},
+		group_join_request: { show: false, errors: [], first_name: "", last_name: "", email: "" },
 		group_nav: 1,
 		groups: [],
 		group_new: { errors: [], name: "", email: "" },
@@ -151,8 +147,13 @@ new Vue({
 	filters: {
 		pretty_timestamp: function (date) {
 			// takes in '2018-06-18 19:44:47' then returns "Monday, Jun 18, 2018, 7:44 PM"
-			formatted_date = new Date(date).toLocaleTimeString("en-us", pretty_timestamp_options);
+			formatted_date = new Date(date).toLocaleTimeString( "en-us", { weekday: "short", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" } )
 			return formatted_date;
+		},
+		pretty_day_timestamp: function (date) {
+			// takes in '2018-06-18 19:44:47' then returns "June 18, 2018"
+			formatted_date = new Date(date).toLocaleDateString( "en-us", { year: "numeric", month: "long", day: "numeric" } )
+			return formatted_date
 		},
 	},
 	methods: {
@@ -250,6 +251,12 @@ new Vue({
 				}
 				if ( organization != "group" ) {
 					this.fetchOrganization()
+				}
+				urlParams = new URLSearchParams(window.location.search)
+				rsvp = urlParams.get('joined');
+				if ( rsvp ) {
+					this.snackbar.message = "Welcome to the group!"
+					this.snackbar.show = true
 				}
 			}
 			if ( this.route == "organization" ) {
@@ -435,6 +442,52 @@ new Vue({
 		editGroup() {
 			this.edit_group = { show: false, errors: [], group: {} }
 			this.edit_group.group = JSON.parse ( JSON.stringify ( this.group ) )
+		},
+		joinGroup() {
+			if( this.user.username ) {
+				headers = {}
+				if ( this.wp_nonce ) {
+					headers['X-WP-Nonce'] = this.wp_nonce
+				}
+				axios.get( `/wp-json/localmeet/v1/group/${this.group.group_id}/join`, {
+					headers: headers
+				}).then( response => {
+					this.fetchGroup()
+					this.snackbar.message = `Joined group '${this.group.name}'`
+					this.snackbar.show = true
+				})
+				return
+			}
+			this.group_join_request.show = true
+		},
+		joinGroupRequest() {
+			axios.post( `/wp-json/localmeet/v1/group/${this.group.group_id}/join`, {
+				request: this.group_join_request
+			}).then( response => {
+				if ( response.data.errors.length > 0 ) {
+					this.group_join_request.errors = response.data.errors
+					return
+				}
+				this.group_join_request = { show: false, errors: [], first_name: "", last_name: "", email: "" }
+				this.snackbar.message = `Check your email to complete joining group '${this.group.name}'`
+				this.snackbar.show = true
+			})
+		},
+		leaveGroup() {
+			if( this.user.username ) {
+				headers = {}
+				if ( this.wp_nonce ) {
+					headers['X-WP-Nonce'] = this.wp_nonce
+				}
+				axios.get( `/wp-json/localmeet/v1/group/${this.group.group_id}/leave`, {
+					headers: headers
+				}).then( response => {
+					this.fetchGroup()
+					this.snackbar.message = `Left group '${this.group.name}'`
+					this.snackbar.show = true
+				})
+				return
+			}
 		},
 		updateGroup() {
 			group_id = this.edit_group.group.group_id

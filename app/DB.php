@@ -212,6 +212,17 @@ class DB {
         PRIMARY KEY  (member_id)
         ) $charset_collate;";
 
+        $sql .= "CREATE TABLE `{$wpdb->base_prefix}localmeet_member_requests` (
+            member_request_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            group_id bigint(20) UNSIGNED,
+            first_name varchar(255),
+            last_name varchar(255),
+            email varchar(255),
+            token varchar(255),
+            created_at datetime NOT NULL,
+        PRIMARY KEY  (member_request_id)
+        ) $charset_collate;";
+
         $sql .= "CREATE TABLE `{$wpdb->base_prefix}localmeet_attendees` (
             attendee_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             event_id bigint(20) UNSIGNED,
