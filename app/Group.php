@@ -143,6 +143,9 @@ class Group {
                 ];
                 $user_id = wp_insert_user( $new_user );
             }
+            if ( empty( $user_id ) ) {
+                continue;
+            }
             $lookup = ( new Members )->where( [ "user_id" => $user_id, "group_id" => $this->group_id ] );
             if ( ! empty( $lookup ) ) {
                 echo "Already added";
