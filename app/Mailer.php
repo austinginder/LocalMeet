@@ -32,20 +32,21 @@ class Mailer {
             ->get();
 
         file_put_contents( "{$path}invite.ics", $generated_ics );
-
+        $event_link  = home_url() . "/group/{$group->fetch()->slug}/{$event->slug}";
         $event_at    = date('F jS', strtotime( $event->event_at ) );
+        $when        = date('l, F jS Y \a\t g:i a', strtotime( $event->event_at ) );
         $subject     = "{$event->name} on $event_at";
         $attachments = [ "{$path}invite.ics" ];
         $reply_to    = "Reply-To: {$group_data->reply_to_name} <{$group_data->reply_to_email}>";
         $headers     = [ 'Content-Type: text/html; charset=UTF-8', $reply_to ];
-        $event_link  = home_url() . "/group/{$group->fetch()->slug}/{$event->slug}";
+        $event_intro = "<a href=\"$event_link\" style='padding: 12px 32px; font-size: 18px;background-color: #eee!important;border-color: #eee!important;margin: 10px;display: inline-block;color: black;text-decoration: none;'><span style='font-weight:bold;'>$event->name</span><br />$when<br>🗺️ $event->location<br><small>$group_data->name</small></a><br /><br />";
         $rsvp        = '<hr><a href="'.$event_link.'" style="padding: 12px 32px; font-size: 18px;background-color: #eee!important;border-color: #eee!important;margin: 10px;display: inline-block;color: black;text-decoration: none;font-weight: bold;">RSVP TO ATTEND EVENT</a>';
 
         foreach( $members as $member ) {
             $token         = $member->member_id . "-" . md5( $member->created_at );
             $leave_link    = home_url() . "/group/{$group->fetch()->slug}/leave?token=$token";
             $member_footer = str_replace( "[leave_group]", $leave_link, $group_data->email_footer );
-            $body          = "{$member->first_name}, <br />$event->description $rsvp $member_footer";
+            $body          = "$event_intro {$member->first_name}, <br />$event->description $rsvp $member_footer";
             wp_mail( $member->email, $subject, $body, $headers, $attachments );
         }
 
