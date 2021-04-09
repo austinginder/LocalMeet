@@ -40,7 +40,7 @@ class Mailer {
         $reply_to    = "Reply-To: {$group_data->reply_to_name} <{$group_data->reply_to_email}>";
         $headers     = [ 'Content-Type: text/html; charset=UTF-8', $reply_to ];
         $event_intro = "<a href=\"$event_link\" style='padding: 12px 32px; font-size: 18px;background-color: #eee!important;border-color: #eee!important;margin: 10px;display: inline-block;color: black;text-decoration: none;'><span style='font-weight:bold;'>$event->name</span><br />$when<br>🗺️ $event->location<br><small>$group_data->name</small></a><br /><br />";
-        $rsvp        = '<hr><a href="'.$event_link.'" style="padding: 12px 32px; font-size: 18px;background-color: #eee!important;border-color: #eee!important;margin: 10px;display: inline-block;color: black;text-decoration: none;font-weight: bold;">RSVP TO ATTEND EVENT</a>';
+        $rsvp        = '<a href="'.$event_link.'" style="padding: 12px 32px; font-size: 18px;background-color: #eee!important;border-color: #eee!important;margin: 10px;display: inline-block;color: black;text-decoration: none;font-weight: bold;">RSVP TO ATTEND EVENT</a>';
 
         foreach( $members as $member ) {
             $token         = $member->member_id . "-" . md5( $member->created_at );
