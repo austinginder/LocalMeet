@@ -91,6 +91,8 @@ return array(
     'LocalMeet\\GroupRequests' => $baseDir . '/app/GroupRequests.php',
     'LocalMeet\\Groups' => $baseDir . '/app/Groups.php',
     'LocalMeet\\Mailer' => $baseDir . '/app/Mailer.php',
+    'LocalMeet\\Member' => $baseDir . '/app/Member.php',
+    'LocalMeet\\MemberRequests' => $baseDir . '/app/MemberRequests.php',
     'LocalMeet\\Members' => $baseDir . '/app/Members.php',
     'LocalMeet\\Organizations' => $baseDir . '/app/Organizations.php',
     'LocalMeet\\User' => $baseDir . '/app/User.php',

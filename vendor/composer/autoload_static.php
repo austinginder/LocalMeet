@@ -163,6 +163,8 @@ class ComposerStaticInitd3b0cfd4a7b3730160ae36177f406f00
         'LocalMeet\\GroupRequests' => __DIR__ . '/../..' . '/app/GroupRequests.php',
         'LocalMeet\\Groups' => __DIR__ . '/../..' . '/app/Groups.php',
         'LocalMeet\\Mailer' => __DIR__ . '/../..' . '/app/Mailer.php',
+        'LocalMeet\\Member' => __DIR__ . '/../..' . '/app/Member.php',
+        'LocalMeet\\MemberRequests' => __DIR__ . '/../..' . '/app/MemberRequests.php',
         'LocalMeet\\Members' => __DIR__ . '/../..' . '/app/Members.php',
         'LocalMeet\\Organizations' => __DIR__ . '/../..' . '/app/Organizations.php',
         'LocalMeet\\User' => __DIR__ . '/../..' . '/app/User.php',
