@@ -29,16 +29,18 @@ class Group {
         } else {
             $group->is_member = false;
         }
-        $group->description_raw = $group->description;
-        $group->description     = ( new \Parsedown )->text( $group->description );
-        $group->show            = "list";
+        $group->description_raw  = $group->description;
+        $group->description      = ( new \Parsedown )->text( $group->description );
+        $details                 = empty( $group->details ) ? (object) [] : json_decode( $group->details );
+        $group->email_footer_raw = $details->email_footer;
+        $group->email_footer     = ( new \Parsedown )->text( $details->email_footer );
+        $group->show             = "list";
         unset( $group->owner_id );
         unset( $group->created_at );
         return $group;
     }
 
     public function generate_unique_event_slug( $text ) {
-
         $event_slugs = array_column( self::events(), "slug" );
         $valid_slug  = false;
         $modifier    = "";
@@ -60,9 +62,9 @@ class Group {
     }
 
     public function members() {
-        $members = ( new Members )->where( [ "group_id" => $this->group_id, "active" => 1 ] );
+        $members  = ( new Members )->where( [ "group_id" => $this->group_id, "active" => 1 ] );
         foreach( $members as $member ) {
-            $user = get_user_by( 'ID', $member->member_id );
+            $user = get_user_by( 'ID', $member->user_id );
             $member->first_name = $user->first_name;
             $member->last_name  = $user->last_name;
             $member->email      = $user->user_email;
@@ -106,6 +108,7 @@ class Group {
         ];
         ( new Members )->insert( $membership );
     }
+
     public function leave() {
         $user_id  = ( new User )->user_id();
         $time_now = date("Y-m-d H:i:s");

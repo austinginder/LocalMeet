@@ -103,6 +103,13 @@ function localmeet_register_rest_endpoints() {
 	);
 
 	register_rest_route(
+		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/announce', [
+			'methods'  => 'GET',
+			'callback' => 'localmeet_event_announce_func',
+		]
+	);
+
+	register_rest_route(
 		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/delete', [
 			'methods'  => 'GET',
 			'callback' => 'localmeet_event_delete_func',
@@ -212,9 +219,25 @@ function localmeet_register_rest_endpoints() {
 	);
 
 	register_rest_route(
+		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/leave/(?P<token>[a-zA-Z0-9-]+)', [
+			'methods'       => 'GET',
+			'callback'      => 'localmeet_groups_member_leave_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
 		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/delete', [
 			'methods'  => 'GET',
 			'callback' => 'localmeet_group_delete_func',
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/member/get/(?P<token>[a-zA-Z0-9-]+)', [
+			'methods'       => 'GET',
+			'callback'      => 'localmeet_member_get_func',
+            'show_in_index' => false
 		]
 	);
 
@@ -470,6 +493,18 @@ function localmeet_event_delete_func( $request ) {
 	return;
 }
 
+function localmeet_event_announce_func( $request ) {
+	$event_id = $request['event_id'];
+	$event    = ( new LocalMeet\Events )->get( $event_id );
+	$group    = ( new LocalMeet\Groups )->get( $event->group_id );
+	$user     = new LocalMeet\User;
+	if ( ! $user->is_admin() && ! $user->user_id() == $group->owner_id ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	( new LocalMeet\Event( $event_id ) )->announce();
+	return;
+}
+
 function localmeet_event_attend_func( $request ) {
 	$going     = 0;
 	$user      = ( new LocalMeet\User )->fetch();
@@ -610,6 +645,39 @@ function localmeet_groups_leave_func( $request ) {
 	return;
 }
 
+function localmeet_groups_member_leave_func( $request ) {
+	$token     = $request['token'];
+	$parts     = explode( "-", $token );
+	$member_id = $parts[0];
+	$token     = $parts[1];
+	if ( empty( $member_id ) ) {
+		return "Not found";
+	}
+	$created_at = ( new LocalMeet\Members )->get( $member_id )->created_at;
+	$member     = new LocalMeet\Member( $member_id );
+	if ( md5( $created_at ) != $token ) {
+		return "Not found";
+	}
+	( new LocalMeet\Member( $member_id ) )->leave();
+	return;
+}
+
+function localmeet_member_get_func( $request ) {
+	$token     = $request['token'];
+	$parts     = explode( "-", $token );
+	$member_id = $parts[0];
+	$token     = $parts[1];
+	if ( empty( $member_id ) ) {
+		return "Not found";
+	}
+	$created_at = ( new LocalMeet\Members )->get( $member_id )->created_at;
+	$member     = new LocalMeet\Member( $member_id );
+	if ( md5( $created_at ) != $token ) {
+		return "Not found";
+	}
+	return $member->fetch();
+}
+
 function localmeet_groups_join_request_func( $request ) {
 	$group_id    = $request['group_id'];
 	$request     = (object) $request['request'];
@@ -668,9 +736,13 @@ function localmeet_groups_update_func( $request ) {
 	if ( count ( $errors ) > 0 ) {
 		return [ "errors" => $errors ];
 	}
+	$current = ( new LocalMeet\Groups )->get( $group->group_id );
+	$details               = empty( $current->details ) ? (object) [] : json_decode( $current->details );
+	$details->email_footer = $group->email_footer_raw;
     ( new LocalMeet\Groups )->update([
 		"name"        => $group->name,
 		"description" => $group->description_raw,
+		"details"     => json_encode( $details ),
 		"slug"        => $group->slug,
 	],[ "group_id"    => $group->group_id ]);
 	return $group->group_id;
@@ -951,8 +1023,8 @@ function localmeet_content() {
 	}
 
 	if ( strpos( $wp->request, "group/" ) !== false ) {
-
-		$name         = str_replace( "group/", "", $wp->request );
+		$url_splits   = explode( "/", $wp->request);
+		$name         = $url_splits[1];
 		$request      = [ "slug" => $name ];
 		$lookup       = ( new LocalMeet\Groups )->where( $request );
 		if ( count( $lookup ) != 1 ) {

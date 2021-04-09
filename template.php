@@ -104,6 +104,7 @@ new Vue({
 		group_new: { errors: [], name: "", email: "" },
 		group_apply: { address: { country: "US" }, type: "new" },
 		group_search: "",
+		member_leave: {},
 		login: { user_login: "", user_password: "", errors: "", loading: false, lost_password: false, message: "" },
 		organization: {},
 		page: "",
@@ -187,13 +188,15 @@ new Vue({
 			}
 			this.route = this.routes[ href ]
 			if ( typeof this.route == 'undefined' ) {
+				group = window.location.pathname.split('/').slice( 2, 3 ).join( "/" )
+				event = window.location.pathname.split('/').slice( 3, 4 ).join( "/" )
 				if ( page_depth == 1 ) {
 					this.route = "organization"
 				}
-				if ( page_depth == 2 ) {
+				if ( page_depth == 2 || event == "leave" || event == "members" || event == "events" ) {
 					this.route = "group"
 				}
-				if ( page_depth == 3 ) {
+				if ( page_depth == 3 && event != "leave" ) {
 					this.event_loading = true
 					this.route = "event"
 				}
@@ -342,8 +345,24 @@ new Vue({
 				headers: headers
 			})
 			.then(response => {
-				this.group = response.data
+				group = response.data
+				action = window.location.pathname.split('/').slice( 3, 4 ).join( "/" )
+				if ( action == "leave" ) {
+					group.show = "leave"
+					this.fetchLeave()
+				}
+				this.group = group
 			});
+		},
+		fetchLeave() {
+			urlParams = new URLSearchParams(window.location.search)
+			token = urlParams.get('token')
+			axios.get( `/wp-json/localmeet/v1/member/get/${token}` )
+				.then(response => {
+					this.member_leave = response.data
+				}).catch(err => {
+					this.route = "missing"
+				})
 		},
 		fetchOrganization() {
 			organization = window.location.pathname.split('/').slice( 1, 2 ).join( "/" )
@@ -370,6 +389,26 @@ new Vue({
 				this.fetchGroup()
 				this.new_event = { show: false, time: "", date: "", time_picker: false, date_selector: false, name: "", location: "", group_id: "", description: "" }
 			})
+		},
+		announceEvent() {
+			proceed = confirm( "Are you sure you want to send out an event announcement?" )
+			if ( ! proceed ) {
+				return
+			}
+			event_id = this.event.event_id
+			axios.get( `/wp-json/localmeet/v1/event/${event_id}/announce`, {
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			}).then( response => {
+				if ( response.data.errors ) {
+					this.edit_event.errors = response.data.errors
+					this.snackbar.message = "Errors " + response.data.errors.split(", ")
+					this.snackbar.show = true
+					return
+				}
+				this.snackbar.message = "Emails sent."
+				this.snackbar.show = true
+			})
+
 		},
 		editEvent() {
 			this.edit_event = { show: false, time: "", date: "", time_picker: false, date_selector: false, errors: [], event: {} }
@@ -488,6 +527,16 @@ new Vue({
 				})
 				return
 			}
+		},
+		leaveGroupConfirm() {
+			urlParams = new URLSearchParams(window.location.search)
+			token = urlParams.get('token')
+			axios.get( `/wp-json/localmeet/v1/group/${this.group.group_id}/leave/${token}` ).then( response => {
+				this.fetchGroup()
+				this.goToPath( this.groupHomeLink( this.group ) )
+				this.snackbar.message = `Left group '${this.group.name}'`
+				this.snackbar.show = true
+			})
 		},
 		updateGroup() {
 			group_id = this.edit_group.group.group_id

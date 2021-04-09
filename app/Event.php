@@ -5,8 +5,7 @@ namespace LocalMeet;
 class Event {
 
     public function __construct( $event_id = "" ) {
-        $this->event_id = $event_id;
-        
+        $this->event_id = $event_id;  
     }
 
     public function fetch() {
@@ -56,4 +55,7 @@ class Event {
         );
     }
     
+    public function announce() {
+        ( new Mailer )->announce_event( $this->event_id );
+    }
 }

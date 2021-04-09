@@ -62,6 +62,11 @@
 								<v-textarea auto-grow v-model="edit_group.group.description_raw" label="Description" rows="3"><v-textarea>
 							</v-col>
 						</v-row>
+						<v-row no-gutters>
+							<v-col>
+								<v-textarea auto-grow v-model="edit_group.group.email_footer_raw" label="Email Footer" rows="3"><v-textarea>
+							</v-col>
+						</v-row>
 						<v-alert type="error" v-for="error in edit_group.errors">{{ error }}</v-alert>
 					</v-card-text>
 					<v-card-actions class="justify-end">
@@ -78,7 +83,7 @@
 	<v-list-item v-show="group.is_member">
 		<v-btn block depressed @click="leaveGroup()">Leave Group <v-icon>mdi-exit</v-icon></v-btn>
 	</v-list-item>
-	<v-list-item v-show="! group.is_member">
+	<v-list-item v-show="! group.is_member && route != 'profile'">
 		<v-btn block depressed @click="joinGroup()">Join Group <v-icon class="ml-1">mdi-bullhorn</v-icon></v-btn>
 	</v-list-item>
 	<v-list-item v-show="route == 'profile'">
@@ -299,6 +304,17 @@
 					</v-list-item>
 				</v-list>
 		</v-card>
+		<v-card class="my-5" style="max-width: 750px; margin: auto" v-show="group.show == 'leave'">
+			<v-toolbar color="primary" dark flat>
+				<v-toolbar-title>Leaving group "{{ group.name }}"</v-toolbar-title>
+				<v-spacer></v-spacer>
+			</v-toolbar>
+			<v-card-text>
+				<p>Hi, {{ member_leave.first_name }} {{ member_leave.last_name }}</p>
+				Would you like to leave the group?
+				<v-btn @click="leaveGroupConfirm()">Confirm removal</v-btn>
+			</v-card-text>
+		</v-card>
 		<v-card class="my-5" style="max-width: 750px; margin: auto" v-show="group.show == 'list'">
 		<v-toolbar color="primary" dark flat>
 			<v-toolbar-title>Events</v-toolbar-title>
@@ -436,7 +452,7 @@
 			<v-toolbar-title>{{ event.name }}</v-toolbar-title>
 			<v-spacer></v-spacer>
 			<v-toolbar-items v-show="user.role == 'administrator' || group.owner">
-			<v-btn icon @click="editEvent()"><v-icon large>mdi-bullhorn</v-icon></v-btn>
+			<v-btn icon @click="announceEvent()"><v-icon large>mdi-bullhorn</v-icon></v-btn>
 			<v-dialog max-width="600" v-model="edit_event.show" persistent>
 					<template v-slot:activator="{ on, attrs }">
 						<v-btn icon v-bind="attrs" v-on="on" @click="editEvent()"><v-icon large>mdi-pencil-box</v-icon></v-btn>
