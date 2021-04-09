@@ -737,8 +737,10 @@ function localmeet_groups_update_func( $request ) {
 		return [ "errors" => $errors ];
 	}
 	$current = ( new LocalMeet\Groups )->get( $group->group_id );
-	$details               = empty( $current->details ) ? (object) [] : json_decode( $current->details );
-	$details->email_footer = $group->email_footer_raw;
+	$details                 = empty( $current->details ) ? (object) [] : json_decode( $current->details );
+	$details->email_footer   = $group->email_footer_raw;
+	$details->reply_to_name  = $group->reply_to_name;
+	$details->reply_to_email = $group->reply_to_email;
     ( new LocalMeet\Groups )->update([
 		"name"        => $group->name,
 		"description" => $group->description_raw,

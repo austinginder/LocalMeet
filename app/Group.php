@@ -32,6 +32,8 @@ class Group {
         $group->description_raw  = $group->description;
         $group->description      = ( new \Parsedown )->text( $group->description );
         $details                 = empty( $group->details ) ? (object) [] : json_decode( $group->details );
+        $group->reply_to_name    = $details->reply_to_name;
+        $group->reply_to_email   = $details->reply_to_email;
         $group->email_footer_raw = $details->email_footer;
         $group->email_footer     = ( new \Parsedown )->text( $details->email_footer );
         $group->show             = "list";

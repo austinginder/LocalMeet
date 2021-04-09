@@ -67,6 +67,12 @@
 								<v-textarea auto-grow v-model="edit_group.group.email_footer_raw" label="Email Footer" rows="3"><v-textarea>
 							</v-col>
 						</v-row>
+						<v-row no-gutters>
+							<v-col>
+								<v-text-field label="Reply To Name" v-model="edit_group.group.reply_to_name" no-details></v-text-field>
+								<v-text-field label="Reply To Email" v-model="edit_group.group.reply_to_email" no-details></v-text-field>
+							</v-col>
+						</v-row>
 						<v-alert type="error" v-for="error in edit_group.errors">{{ error }}</v-alert>
 					</v-card-text>
 					<v-card-actions class="justify-end">
