@@ -535,6 +535,11 @@
 									<v-textarea auto-grow v-model="edit_event.event.description_raw" label="Description" rows="3"><v-textarea>
 								</v-col>
 							</v-row>
+							<v-row no-gutters>
+								<v-col>
+									<v-textarea auto-grow label="Summary" hint="Recap notes about event after it's completed." persistent-hint v-model="edit_event.event.summary_raw" rows="3"><v-textarea>
+								</v-col>
+							</v-row>
 							<v-alert type="error" v-for="error in edit_event.errors">{{ error }}</v-alert>
 						</v-card-text>
 						<v-card-actions class="justify-end">

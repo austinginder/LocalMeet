@@ -550,7 +550,7 @@ function localmeet_event_attend_func( $request ) {
 }
 
 function localmeet_event_update_func( $request ) {
-	$errors = [];
+	$errors     = [];
 	$edit_event = (object) $request['edit_event'];
 	$event      = (object) $edit_event->event;
 	if ( empty( $event->name ) ) {
@@ -563,6 +563,7 @@ function localmeet_event_update_func( $request ) {
 			"name"        => $event->name,
 			"event_at"    => $event->event_at,
 			"description" => $event->description_raw,
+			"summary"     => $event->summary_raw,
 			"location"    => $event->location,
 			"slug"        => $event->slug,
 		],[ "event_id"    => $event->event_id ]);
@@ -932,41 +933,9 @@ function localmeet_event_func( $request ) {
     if ( count( $lookup ) != 1 ) {
         return new WP_Error( 'not_found', 'Event not found.', [ 'status' => 404 ] );
     }
-    $lookup   = (object) $lookup[0];
-	$time_now = date("Y-m-d H:i:s");
-	if ( $lookup->event_at > $time_now ) {
-		$lookup->status = "upcoming";
-	}
-	if ( $lookup->event_at < $time_now ) {
-		$lookup->status = "past";
-	}
-    $lookup->description_raw = $lookup->description;
-	$lookup->description     = ( new Parsedown )->text( $lookup->description );
-	$going                   = ( new LocalMeet\Attendees )->where( [ "event_id" => $lookup->event_id, "going" => 1 ] );
-	$not_going               = ( new LocalMeet\Attendees )->where( [ "event_id" => $lookup->event_id, "going" => 0 ] );
-	foreach ( $going as $key => $attendee ) {
-		$user             = get_userdata( $attendee->user_id );
-        $attendee->name   = "{$user->first_name} {$user->last_name}";
-        $attendee->avatar = get_avatar_url( $user->user_email, [ "size" => "80" ] );
-        $going[ $key ]    = $attendee;
-	}
-	foreach ( $not_going as $key => $attendee ) {
-		$user              = get_userdata( $attendee->user_id );
-        $attendee->name    = "{$user->first_name} {$user->last_name}";
-        $attendee->avatar  = get_avatar_url( $user->user_email, [ "size" => "80" ] );
-        $not_going[ $key ] = $attendee;
-	}
+	$event = ( new LocalMeet\Event( $lookup[0]->event_id ) )->fetch();
 
-	array_multisort( 
-		array_column( $going, 'description' ), SORT_DESC,
-		array_column( $going, 'name' ), SORT_ASC,
-		$going
-	);
-		
-    $lookup->attendees     = $going; 
-	$lookup->attendees_not = $not_going;
-
-	return $lookup;
+	return $event;
 }
 
 function localmeet_group_func( $request ) {

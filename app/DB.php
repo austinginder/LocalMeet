@@ -206,6 +206,7 @@ class DB {
             group_id bigint(20) UNSIGNED,
             location longtext,
             description longtext,
+            summary longtext,
             name varchar(255),
             slug varchar(255),
             event_at datetime NOT NULL,

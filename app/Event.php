@@ -19,6 +19,8 @@ class Event {
         }
         $event->description_raw = $event->description;
         $event->description     = ( new \Parsedown )->text( $event->description );
+        $event->summary_raw     = $event->summary;
+        $event->summary         = ( new \Parsedown )->text( $event->summary );
         $event->attendees       = self::going(); 
         $event->attendees_not   = self::not_going();
         $event->comments        = self::comments();
