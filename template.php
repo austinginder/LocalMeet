@@ -638,6 +638,24 @@ new Vue({
 				this.wp_nonce = "";
 			})
 		},
+		resetPassword() {
+			this.login.loading = true
+			if ( ! this.$refs.reset.validate() ) {
+				this.login.loading = false
+				return
+			}
+			axios.post( '/wp-json/localmeet/v1/login/', {
+					'command': "reset",
+					'login': this.login
+				})
+				.then( response => {
+					this.login.message = "A password reset email is on it's way."
+					this.login.loading = false
+				})
+				.catch(error => {
+					console.log(error);
+				});
+		},
 	}
 })
 </script>
