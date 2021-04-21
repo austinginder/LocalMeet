@@ -125,6 +125,30 @@ function localmeet_register_rest_endpoints() {
 	);
 
 	register_rest_route(
+		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/comment/new', [
+			'methods'       => 'POST',
+			'callback'      => 'localmeet_event_comment_new_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/comment/(?P<comment_id>[a-zA-Z0-9-]+)/update', [
+			'methods'       => 'POST',
+			'callback'      => 'localmeet_event_comment_update_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/comment/delete', [
+			'methods'       => 'POST',
+			'callback'      => 'localmeet_event_comment_delete_func',
+			'show_in_index' => false
+		]
+	);
+
+	register_rest_route(
 		'localmeet/v1', '/events/create', [
 			'methods'       => 'POST',
 			'callback'      => 'localmeet_events_create_func',
@@ -544,6 +568,59 @@ function localmeet_event_update_func( $request ) {
 		],[ "event_id"    => $event->event_id ]);
 
     return $event->event_id;
+}
+
+function localmeet_event_comment_new_func( $request ) {
+	$errors     = [];
+	$event      = (object) $edit_event->event;
+	$time_now   = date("Y-m-d H:i:s");
+	$user       = new LocalMeet\User;
+	if ( ! $user->is_admin() && ! $user->user_id() ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	if ( count ( $errors ) > 0 ) {
+		return [ "errors" => $errors ];
+	}
+	$comment_id = ( new LocalMeet\Comments )->insert( [
+		"user_id"     => $user->user_id(),
+		"event_id"    => $request['event_id'],
+		"details"     => $request['comment'],
+		"created_at"  => $time_now,
+	] );
+
+    return $comment_id;
+}
+
+function localmeet_event_comment_update_func( $request ) {
+	$errors     = [];
+	$event      = (object) $edit_event->event;
+	$time_now   = date("Y-m-d H:i:s");
+	$user       = new LocalMeet\User;
+	if ( ! $user->is_admin() && ! $user->user_id() ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	if ( ! $user->is_admin() && $comment->user_id != $user->user_id() ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	$comment_id = ( new LocalMeet\Comments )->update( [
+		"event_id"    => $request['event_id'],
+		"details"     => $request['comment'],
+	], [ "comment_id"    => $request['comment_id'] ] );
+
+    return $comment_id;
+}
+
+function localmeet_event_comment_delete_func( $request ) {
+	$user = new LocalMeet\User;
+	if ( ! $user->is_admin() && ! $user->user_id() ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	$comment = ( new LocalMeet\Comments )->get( $request['comment_id'] );
+	if ( ! $user->is_admin() || $comment->user_id != $user->user_id() ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	( new LocalMeet\Comments )->delete( $comment->comment_id );
+    return;
 }
 
 function localmeet_events_create_func( $request ) {

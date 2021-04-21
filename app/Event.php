@@ -21,6 +21,7 @@ class Event {
         $event->description     = ( new \Parsedown )->text( $event->description );
         $event->attendees       = self::going(); 
         $event->attendees_not   = self::not_going();
+        $event->comments        = self::comments();
         return $event;
     }
 
@@ -53,6 +54,25 @@ class Event {
             array_column( $attendees, 'name' ), SORT_ASC,
             $attendees
         );
+        return $attendees;
+    }
+
+    public function comments() {
+        $current_user_id = get_current_user_id();
+        $comments        = ( new Comments )->where( [ "event_id" => $this->event_id ] );
+        foreach ( $comments as $key => $comment ) {
+            $user             = get_userdata( $comment->user_id );
+            $comment->name    = "{$user->first_name} {$user->last_name}";
+            $comment->avatar  = get_avatar_url( $user->user_email, [ "size" => "80" ] );
+            if ( $comment->user_id == $current_user_id ){
+                $comment->owner = true;
+            }
+            $comment->details_raw = $comment->details;
+            $comment->details     = ( new \Parsedown )->text( $comment->details );
+            unset( $comment->user_id );
+            $comments[ $key ] = $comment;
+        }
+        return $comments;
     }
     
     public function announce() {

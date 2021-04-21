@@ -96,6 +96,7 @@ new Vue({
 		new_event: { show: false, time: "", date: "", time_picker: false, date_selector: false, name: "", location: "", group_id: "", description: "" },
 		edit_event: { show: false, time: "", date: "", time_picker: false, date_selector: false, errors: [], event: {} },
 		attend_event: { show: false, event_id: "", first_name: "", last_name: "", email: "", errors: [] },
+		new_comment: "",
 		edit_group: { show: false, errors: [], group: {} },
 		group: {},
 		group_join_request: { show: false, errors: [], first_name: "", last_name: "", email: "" },
@@ -476,6 +477,58 @@ new Vue({
 				this.attend_menu = false
 				this.fetchEvent()
 				this.attend_selection = ""
+			})
+		},
+		addComment() {
+			headers = {}
+			if ( this.wp_nonce ) {
+				headers['X-WP-Nonce'] = this.wp_nonce
+			}
+			event_id = this.event.event_id
+			axios.post( `/wp-json/localmeet/v1/event/${event_id}/comment/new`, {
+				'comment': this.new_comment,
+			},{
+				headers: headers
+			}).then( response => {
+				this.new_comment = ""
+				this.fetchEvent()
+			})
+		},
+		updateComment( comment ) {
+			headers = {}
+			if ( this.wp_nonce ) {
+				headers['X-WP-Nonce'] = this.wp_nonce
+			}
+			event_id = this.event.event_id
+			axios.post( `/wp-json/localmeet/v1/event/${event_id}/comment/${comment.comment_id}/update`, {
+				'comment': comment.details_raw
+			},{
+				headers: headers
+			}).then( response => {
+				this.fetchEvent()
+			})
+		},
+		deleteComment( comment_id ) {
+			comment = this.event.comments.filter( c => c.comment_id == comment_id )
+			proceed = confirm( `Delete comment?`)
+			if ( ! proceed ) {
+				return
+			}
+			headers = {}
+			if ( this.wp_nonce ) {
+				headers['X-WP-Nonce'] = this.wp_nonce
+			}
+			
+			if ( comment.length != 1 ) {
+				return
+			}
+			event_id = this.event.event_id
+			axios.post( `/wp-json/localmeet/v1/event/${event_id}/comment/delete`, {
+				'comment_id': comment_id,
+			},{
+				headers: headers
+			}).then( response => {
+				this.fetchEvent()
 			})
 		},
 		editGroup() {

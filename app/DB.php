@@ -169,6 +169,16 @@ class DB {
         PRIMARY KEY  (organization_id)
         ) $charset_collate;";
 
+        $sql .= "CREATE TABLE `{$wpdb->base_prefix}localmeet_comments` (
+            comment_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            event_id bigint(20) UNSIGNED,
+            user_id bigint(20) UNSIGNED,
+            details longtext,
+            revisions longtext,
+            created_at datetime NOT NULL,
+        PRIMARY KEY  (comment_id)
+        ) $charset_collate;";
+
         $sql .= "CREATE TABLE `{$wpdb->base_prefix}localmeet_groups` (
             group_id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             owner_id bigint(20) UNSIGNED,

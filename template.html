@@ -658,7 +658,100 @@
 			</div>
 			</div>
 			</v-col>
+		</v-row>
+		<v-row v-show="event.summary != ''">
+			<v-col>
+				<v-divider></v-divider>	
+				<v-subheader>Summary notes</v-subheader>
+				<v-card-text v-html="event.summary">
+				</v-card-text>
+			</v-col>
+		</v-row>
 	</v-card>
+	<v-timeline dense clipped>
+      <v-timeline-item large v-show="user.username">
+        <template v-slot:icon>
+			<v-avatar>
+				<img :src="user.avatar">
+			</v-avatar>
+        </template>
+        <v-textarea
+          v-model="new_comment"
+          hide-details
+          label="Leave a comment..."
+          solo
+		  rows="2"
+		  auto-grow
+        >
+          <template v-slot:append>
+            <v-btn
+              class="ma-0"
+              depressed
+              @click="addComment()"
+            >
+              Post
+            </v-btn>
+          </template>
+        </v-textarea>
+      </v-timeline-item>
+
+      <v-timeline-item
+        class="mb-6"
+        hide-dot
+		v-show="event.comments.length > 0"
+      >
+        <span>COMMENTS</span>
+      </v-timeline-item>
+
+      <v-timeline-item
+        class="mb-4"
+        color="grey"
+        icon-color="grey lighten-2"
+		v-for="comment in event.comments"
+        small
+      >
+	  <template v-slot:icon>
+		<v-avatar>
+			<img :src="comment.avatar">
+		</v-avatar>
+		</template>
+        <v-row justify="space-between" no-gutters>
+          <v-col cols="10">
+            <div v-html="comment.details"></div>
+			<p class="mt-2"><small>{{ comment.created_at | pretty_timestamp }}</small></p>
+          </v-col>
+		  <v-col cols="2" class="text-right" v-show="comment.owner">
+			<v-dialog max-width="600" persistent>
+				<template v-slot:activator="{ on, attrs }">
+					<v-btn icon small v-bind="attrs" v-on="on"><v-icon small>mdi-pencil</v-icon></v-btn>
+				</template>
+				<template v-slot:default="dialog">
+				<v-card>
+					<v-toolbar color="primary" dark>
+						<v-toolbar-title>Edit Comment</v-toolbar-title>
+						<v-spacer></v-spacer>
+						<v-toolbar-items>
+							<v-btn icon @click="dialog.value = false"><v-icon large>mdi-close-box</v-icon></v-btn>
+						<v-toolbar-items>
+					</v-toolbar>
+					<v-card-text>
+						<v-row no-gutters>
+							<v-col class="mt-3">
+								<v-textarea auto-grow v-model="comment.details_raw" rows="3"></v-textarea>
+							</v-col>
+						</v-row>
+					</v-card-text>
+					<v-card-actions class="justify-end">
+						<v-btn color="primary" @click="updateComment( comment ); dialog.value = false">Update Comment</v-btn>
+					</v-card-actions>
+				</v-card>
+				</template>
+			</v-dialog>
+			<v-btn icon small @click="deleteComment( comment.comment_id )"><v-icon small>mdi-delete</v-icon></v-btn>
+		  </v-col>
+        </v-row>
+      </v-timeline-item>
+    </v-timeline>
 	<v-btn :href="groupHomeLink( group )" @click.prevent="goToPath( groupHomeLink( group ) )" class="my-3"><v-icon class="mr-1">mdi-arrow-left-box</v-icon> All events</v-btn>
 	</div>
 	</v-card>
