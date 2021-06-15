@@ -9,6 +9,9 @@ class Event {
     }
 
     public function fetch() {
+
+        date_default_timezone_set( get_option('timezone_string') );
+
         $event    = ( new Events )->get( $this->event_id );
         $time_now = date("Y-m-d H:i:s");
         if ( $event->event_at > $time_now ) {
