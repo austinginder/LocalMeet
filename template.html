@@ -722,8 +722,8 @@
 		</template>
         <v-row justify="space-between" no-gutters>
           <v-col cols="10">
+			<p class="ma-0"><small><strong class="mr-2">{{ comment.name }}</strong> {{ comment.created_at | pretty_timestamp }}</small></p>
             <div v-html="comment.details"></div>
-			<p class="mt-2"><small>{{ comment.created_at | pretty_timestamp }}</small></p>
           </v-col>
 		  <v-col cols="2" class="text-right" v-show="comment.owner">
 			<v-dialog max-width="600" persistent>
