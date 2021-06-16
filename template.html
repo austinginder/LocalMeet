@@ -712,10 +712,11 @@
         color="grey"
         icon-color="grey lighten-2"
 		v-for="comment in event.comments"
+		class="pb-2"
         small
       >
 	  <template v-slot:icon>
-		<v-avatar>
+		<v-avatar class="mt-7">
 			<img :src="comment.avatar">
 		</v-avatar>
 		</template>
