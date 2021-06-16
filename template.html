@@ -673,7 +673,7 @@
 			</v-col>
 		</v-row>
 	</v-card>
-	<v-timeline dense clipped>
+	<v-timeline dense clipped align-top>
       <v-timeline-item large v-show="user.username">
         <template v-slot:icon>
 			<v-avatar>
@@ -709,7 +709,6 @@
       </v-timeline-item>
 
       <v-timeline-item
-        class="mb-4"
         color="grey"
         icon-color="grey lighten-2"
 		v-for="comment in event.comments"
