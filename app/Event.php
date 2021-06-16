@@ -10,14 +10,13 @@ class Event {
 
     public function fetch() {
 
-        date_default_timezone_set( get_option('timezone_string') );
-
         $event    = ( new Events )->get( $this->event_id );
-        $time_now = date("Y-m-d H:i:s");
-        if ( $event->event_at > $time_now ) {
+        $time_now = ( new \DateTime("now", new \DateTimeZone( get_option('timezone_string') ) ) )->format('Y-m-d H:i:s');
+        $event_at = $event->event_at;
+        if ( $event_at > $time_now ) {
             $event->status = "upcoming";
         }
-        if ( $event->event_at < $time_now ) {
+        if ( $event_at < $time_now ) {
             $event->status = "past";
         }
         $event->description_raw = $event->description;
@@ -63,6 +62,7 @@ class Event {
     }
 
     public function comments() {
+        
         $current_user_id = get_current_user_id();
         $comments        = ( new Comments )->where( [ "event_id" => $this->event_id ] );
         foreach ( $comments as $key => $comment ) {
@@ -72,6 +72,7 @@ class Event {
             if ( $comment->user_id == $current_user_id ){
                 $comment->owner = true;
             }
+            $comment->created_at  = ( new \DateTime( $comment->created_at ) )->setTimezone(new \DateTimeZone( get_option('timezone_string') ))->format('Y-m-d H:i:s');
             $comment->details_raw = $comment->details;
             $comment->details     = ( new \Parsedown )->text( $comment->details );
             unset( $comment->user_id );

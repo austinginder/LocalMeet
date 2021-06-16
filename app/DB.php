@@ -84,7 +84,8 @@ class DB {
     static function upcoming( $conditions ) {
         global $wpdb;
         $where_statements = [];
-        $today = gmdate('Y-m-d h:i:s');
+        
+        $today = ( new \DateTime("now", new \DateTimeZone( get_option('timezone_string') ) ) )->format('Y-m-d H:i:s');
         foreach ( $conditions as $row => $value ) {
             $where_statements[] =  "`{$row}` = '{$value}'";
         }
