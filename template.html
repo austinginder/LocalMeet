@@ -3,9 +3,9 @@
 	<v-app-bar app class="mb-5" style="left:0px" color="#fff">
 		<v-app-bar-nav-icon @click.stop="drawer = !drawer" class="d-md-none d-lg-none d-xl-none" v-show="route != '' && route != 'start-group' && route != 'find-group'"></v-app-bar-nav-icon>
 		<a href="/" @click.prevent="goToPath( '/')"><v-img :src=`${plugins_url}/localmeet/img/LocalMeet-logo.png` style="max-width: 200px;" lazy></v-img></a>
-		Self-starting local meetups
+			<span :style="$vuetify.breakpoint.xs ? 'display:none;' : 'display:block;'">Self-starting local meetups</span>
 		<v-spacer></v-spacer>
-		<v-list class="pa-0">
+		<v-list class="pa-0" dense>
 			<v-list-item v-show="! user.username">
 				<v-list-item-content>
 					<v-dialog max-width="600">
