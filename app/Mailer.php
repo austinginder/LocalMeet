@@ -1,8 +1,6 @@
 <?php
 
 namespace LocalMeet;
-use Spatie\IcalendarGenerator\Components\Calendar as SpatieCalendar;
-use Spatie\IcalendarGenerator\Components\Event as SpatieEvent;
 
 class Mailer {
 
@@ -23,8 +21,8 @@ class Mailer {
         $ends_at = new \DateTime($event->event_at, new \DateTimeZone('America/New_York')); 
         date_add( $ends_at, date_interval_create_from_date_string('1 hour 30 minutes'));
 
-        $generated_ics = SpatieCalendar::create( $event->name )
-            ->event( SpatieEvent::create( $event->name )
+        $generated_ics = \Spatie\IcalendarGenerator\Components\Calendar::create( $event->name )
+            ->event( \Spatie\IcalendarGenerator\Components\Event::create( $event->name )
                 ->organizer( $group_data->reply_to_email, $group_data->reply_to_name )
                 ->startsAt( new \DateTime( $event->event_at, new \DateTimeZone('America/New_York') ) )
                 ->endsAt( $ends_at )
