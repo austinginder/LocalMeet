@@ -525,7 +525,7 @@ function localmeet_event_announce_func( $request ) {
 	if ( ! $user->is_admin() && ! $user->user_id() == $group->owner_id ) {
 		return [ "errors" => [ "Permission denied." ] ];
 	}
-	( new LocalMeet\Event( $event_id ) )->announce();
+	( new LocalMeet\Mailer )->announce_event( $event_id );
 	return;
 }
 
@@ -940,7 +940,7 @@ function localmeet_event_func( $request ) {
 
 function localmeet_group_func( $request ) {
     $organization = $_GET['organization'];
-    $name         = $request['name'];
+    $name         = isset( $request['name'] ) ? $request['name'] : "";
     $request      = [ "slug" => $name ];
     if ( ! empty( $organization ) ) {
         $lookup = ( new LocalMeet\Organizations )->where( [ "slug" => $organization ] );
