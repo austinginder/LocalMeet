@@ -2,6 +2,25 @@
 
 All notable changes to `icalendar-generator` will be documented in this file
 
+## 2.3.0 - 2020-08-20
+
+- add support for attachments on events
+- add a new expectation testing mechanism for internal tests
+
+## 2.2.2 - 2020-08-19
+
+- fix date timezones on all day events (#55)
+
+## 2.2.1 - 2020-07-08
+
+- fix coordinates with Apple calendar (#51)
+
+## 2.2.0 - 2020-06-08
+
+- follow the RFC more exactly with full days
+- add support for multiple value types within parameters
+- add an `EmptyProperty` without value and only parameters
+
 ## 2.1.1 - 2020-03-03
 
 - allow a full day event without specifying the end date

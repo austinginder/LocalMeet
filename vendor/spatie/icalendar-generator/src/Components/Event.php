@@ -2,7 +2,6 @@
 
 namespace Spatie\IcalendarGenerator\Components;
 
-use Amp\ByteStream\Payload;
 use DateTime;
 use DateTimeImmutable;
 use DateTimeInterface;
@@ -11,6 +10,7 @@ use Spatie\IcalendarGenerator\ComponentPayload;
 use Spatie\IcalendarGenerator\Enums\Classification;
 use Spatie\IcalendarGenerator\Enums\EventStatus;
 use Spatie\IcalendarGenerator\Enums\ParticipationStatus;
+use Spatie\IcalendarGenerator\Properties\AppleLocationCoordinatesProperty;
 use Spatie\IcalendarGenerator\Properties\CalendarAddressProperty;
 use Spatie\IcalendarGenerator\Properties\CoordinatesProperty;
 use Spatie\IcalendarGenerator\Properties\DateTimeProperty;
@@ -72,6 +72,9 @@ class Event extends Component implements HasTimezones
     public array $excluded_recurrence_dates = [];
 
     private ?string $url = null;
+
+    /** @var array[] */
+    private array $attachments = [];
 
     public static function create(string $name = null): Event
     {
@@ -309,6 +312,16 @@ class Event extends Component implements HasTimezones
         return $this;
     }
 
+    public function attachment(string $url, ?string $mediaType = null): Event
+    {
+        $this->attachments[] = [
+            'url' => $url,
+            'type' => $mediaType,
+        ];
+
+        return $this;
+    }
+
     public function getTimezoneRangeCollection(): TimezoneRangeCollection
     {
         if ($this->withoutTimezone) {
@@ -330,6 +343,8 @@ class Event extends Component implements HasTimezones
 
         $this
             ->resolveProperties($payload)
+            ->resolveDateProperty($payload, $this->starts, 'DTSTART')
+            ->resolveDateProperty($payload, $this->ends, 'DTEND')
             ->resolveLocationProperties($payload)
             ->resolveAlerts($payload);
 
@@ -338,14 +353,6 @@ class Event extends Component implements HasTimezones
 
     private function resolveProperties(ComponentPayload $payload): self
     {
-        if ($this->isFullDay) {
-            $this->starts = DateTimeValue::create($this->starts->getDateTime(), false);
-            $this->ends = DateTimeValue::create(
-                $this->ends ? $this->ends->getDateTime() : $this->starts->getDateTime(),
-                false
-            );
-        }
-
         $payload
             ->property(TextProperty::create('UID', $this->uuid))
             ->property(DateTimeProperty::create('DTSTAMP', $this->created, $this->withoutTimezone))
@@ -374,14 +381,6 @@ class Event extends Component implements HasTimezones
                 fn () => TextProperty::create('TRANSP', 'TRANSPARENT')
             )
             ->optional(
-                $this->starts,
-                fn () => DateTimeProperty::create('DTSTART', $this->starts, $this->withoutTimezone)
-            )
-            ->optional(
-                $this->ends,
-                fn () => DateTimeProperty::create('DTEND', $this->ends, $this->withoutTimezone)
-            )
-            ->optional(
                 $this->organizer,
                 fn () => CalendarAddressProperty::create('ORGANIZER', $this->organizer)
             )
@@ -396,17 +395,46 @@ class Event extends Component implements HasTimezones
             ->optional(
                 $this->url,
                 fn () => UriProperty::create('URL', $this->url)
-            )->multiple(
+            )
+            ->multiple(
                 $this->recurrence_dates,
-                fn (DateTimeValue $dateTime) => DateTimeProperty::create('RDATE', $dateTime)->addParameter(
-                    Parameter::create('VALUE', $dateTime->hasTime() ? 'DATE-TIME' : 'DATE')
-                )
-            )->multiple(
+                fn (DateTimeValue $dateTime) => self::dateTimePropertyWithSpecifiedType('RDATE', $dateTime)
+            )
+            ->multiple(
                 $this->excluded_recurrence_dates,
-                fn (DateTimeValue $dateTime) => DateTimeProperty::create('EXDATE', $dateTime)->addParameter(
-                    Parameter::create('VALUE', $dateTime->hasTime() ? 'DATE-TIME' : 'DATE')
-                )
+                fn (DateTimeValue $dateTime) => self::dateTimePropertyWithSpecifiedType('EXDATE', $dateTime)
+            )
+            ->multiple(
+                $this->attachments,
+                fn (array $attachment) => $attachment['type'] !== null
+                    ? UriProperty::create('ATTACH', $attachment['url'])->addParameter(Parameter::create('FMTTYPE', $attachment['type']))
+                    : UriProperty::create('ATTACH', $attachment['url'])
             );
+
+        return $this;
+    }
+
+    private static function dateTimePropertyWithSpecifiedType(
+        string $name,
+        DateTimeValue $dateTimeValue
+    ): DateTimeProperty {
+        $property = DateTimeProperty::create($name, $dateTimeValue);
+        if ($dateTimeValue->hasTime()) {
+            $property->addParameter(Parameter::create('VALUE', 'DATE-TIME'));
+        }
+
+        return $property;
+    }
+
+    private function resolveDateProperty(ComponentPayload $payload, ?DateTimeValue $value, string $name): self
+    {
+        if ($value === null) {
+            return $this;
+        }
+
+        $payload->property(
+            DateTimeProperty::fromDateTime($name, $value->getDateTime(), ! $this->isFullDay, $this->withoutTimezone)
+        );
 
         return $this;
     }
@@ -423,14 +451,12 @@ class Event extends Component implements HasTimezones
             return $this;
         }
 
-        $property = CoordinatesProperty::create(
-            'X-APPLE-STRUCTURED-LOCATION',
+        $property = AppleLocationCoordinatesProperty::create(
             $this->lat,
-            $this->lng
-        )->addParameter(Parameter::create('VALUE', 'URI'))
-            ->addParameter(Parameter::create('X-ADDRESS', $this->address))
-            ->addParameter(Parameter::create('X-APPLE-RADIUS', 72))
-            ->addParameter(Parameter::create('X-TITLE', $this->addressName));
+            $this->lng,
+            $this->address,
+            $this->addressName
+        );
 
         $payload->property($property);
 

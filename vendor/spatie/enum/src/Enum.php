@@ -30,8 +30,24 @@ abstract class Enum implements JsonSerializable
     /** @psalm-readonly */
     protected string $label;
 
-    /** @psalm-var array<string, array<string, \Spatie\Enum\EnumDefinition>> */
+    /** @psalm-var array<class-string, array<string, \Spatie\Enum\EnumDefinition>> */
     private static array $definitionCache = [];
+
+    /** @psalm-var array<class-string, array<int|string, \Spatie\Enum\Enum>> */
+    private static array $instances = [];
+
+    /**
+     * @return static[]
+     */
+    public static function cases(): array
+    {
+        $instances = array_map(
+            fn (EnumDefinition $definition): Enum => static::from($definition->value),
+            static::resolveDefinition()
+        );
+
+        return array_values($instances);
+    }
 
     /**
      * @return string[]
@@ -68,10 +84,47 @@ abstract class Enum implements JsonSerializable
      * @param string|int $value
      *
      * @return static
+     * @deprecated Use `from()` instead
      */
     public static function make($value): Enum
     {
-        return new static($value);
+        return static::from($value);
+    }
+
+    /**
+     * @param string|int $value
+     *
+     * @return static
+     */
+    final public static function from($value): Enum
+    {
+        if (! (is_string($value) || is_int($value))) {
+            $enumClass = static::class;
+
+            throw new TypeError("Only string and integer are allowed values for enum {$enumClass}.");
+        }
+
+        $enum = new static($value);
+
+        if (!isset(self::$instances[static::class][$enum->value])) {
+            self::$instances[static::class][$enum->value] = $enum;
+        }
+
+        return self::$instances[static::class][$enum->value];
+    }
+
+    /**
+     * @param string|int $value
+     *
+     * @return static
+     */
+    final public static function tryFrom($value): ?Enum
+    {
+        try {
+            return static::from($value);
+        } catch (BadMethodCallException $dummy) {
+            return null;
+        }
     }
 
     /**
