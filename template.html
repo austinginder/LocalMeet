@@ -42,7 +42,7 @@
 									<v-text-field label="Username or Email" :value="login.user_login" @change.native="login.user_login = $event.target.value" required :disabled="login.loading" :rules="[v => !!v || 'Username is required']"></v-text-field>
 								</v-col>
 								<v-col cols="12">
-									<v-text-field label="Password" :value="login.user_password" @change.native="login.user_password = $event.target.value" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']"></v-text-field>
+									<v-text-field label="Password" v-model="login.user_password" required :disabled="login.loading" type="password" :rules="[v => !!v || 'Password is required']"></v-text-field>
 								</v-col>
 								<v-col cols="12">
 									<v-alert text type="error" v-show="login.errors">{{ login.errors }}</v-alert>
