@@ -2,9 +2,6 @@
 
 namespace LocalMeet;
 
-use Spatie\IcalendarGenerator\Components\Calendar;
-use Spatie\IcalendarGenerator\Components\Event as SpatieEvent;
-
 class Mailer {
 
     public function announce_event( $event_id ) {
@@ -17,20 +14,40 @@ class Mailer {
         $group_data = $group->fetch();
         $home_path  = get_home_path();
         $path       = "{$home_path}invites/{$event->event_id}/";
+        
         if ( ! is_dir( $path ) ) {
             mkdir ( $path );
         }
 
-        $ends_at = new \DateTime($event->event_at, new \DateTimeZone('America/New_York'));
-        date_add( $ends_at, date_interval_create_from_date_string('1 hour 30 minutes'));
+        $ends_at = new \DateTime( $event->event_at );
+        date_add( $ends_at, date_interval_create_from_date_string( '1 hour 30 minutes' ) );
 
-        $generated_ics = Calendar::create( $event->name )
-            ->event( SpatieEvent::create( $event->name )
-                ->organizer( $group_data->reply_to_email, $group_data->reply_to_name )
-                ->startsAt( new \DateTime( $event->event_at, new \DateTimeZone('America/New_York') ) )
-                ->endsAt( $ends_at )
-            )
-            ->get();
+        $start      = new \Eluceo\iCal\Domain\ValueObject\DateTime(\DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $event->event_at), false);
+        $end        = new \Eluceo\iCal\Domain\ValueObject\DateTime(\DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $ends_at->format("Y-m-d h:m:s")), false);
+        $occurrence = new \Eluceo\iCal\Domain\ValueObject\TimeSpan($start, $end);
+
+       $organizer = new \Eluceo\iCal\Domain\ValueObject\Organizer(
+            new \Eluceo\iCal\Domain\ValueObject\EmailAddress( $group_data->reply_to_email ), 
+            $group_data->reply_to_name,
+        );
+
+        $meetup = (new \Eluceo\iCal\Domain\Entity\Event())
+            ->setSummary( $event->name )
+            ->setOrganizer($organizer)
+            ->setOccurrence(
+                new \Eluceo\iCal\Domain\ValueObject\TimeSpan( $start, $end )
+            );
+        
+        $calendar = new \Eluceo\iCal\Domain\Entity\Calendar( [$meetup] );
+        $timeZone = ( new \Eluceo\iCal\Domain\Entity\TimeZone( "timezone" ) )::createFromPhpDateTimeZone( 
+            new \DateTimeZone('America/New_York'),
+            new \DateTimeImmutable( $event->event_at, new \DateTimeZone('America/New_York') ),
+            new \DateTimeImmutable( $ends_at->format("Y-m-d h:m:s"), new \DateTimeZone('America/New_York') ),
+        );
+        $calendar->addTimeZone($timeZone);
+        
+        $componentFactory = new \Eluceo\iCal\Presentation\Factory\CalendarFactory();
+        $generated_ics    = $componentFactory->createCalendar($calendar);
 
         file_put_contents( "{$path}invite.ics", $generated_ics );
         $event_link  = home_url() . "/group/{$group->fetch()->slug}/{$event->slug}";
