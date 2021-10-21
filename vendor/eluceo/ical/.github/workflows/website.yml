@@ -1,0 +1,28 @@
+name: Deploy Website
+
+on:
+  push:
+    paths:
+      - ".github/workflows/website.yml"
+      - "website/**"
+      - "Dockerfile"
+    branches:
+      - 2.x
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v1
+      - name: Turnstyle
+        timeout-minutes: 18
+        uses: softprops/turnstyle@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Dokku Deployment
+        uses: vitalyliber/dokku-github-action@master
+        env:
+          PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
+          HOST: ical.poerschke.nrw
+          PROJECT: ical
