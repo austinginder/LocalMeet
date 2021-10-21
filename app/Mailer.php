@@ -22,8 +22,8 @@ class Mailer {
         $ends_at = new \DateTime( $event->event_at );
         date_add( $ends_at, date_interval_create_from_date_string( '1 hour 30 minutes' ) );
 
-        $start      = new \Eluceo\iCal\Domain\ValueObject\DateTime(\DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $event->event_at), false);
-        $end        = new \Eluceo\iCal\Domain\ValueObject\DateTime(\DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $ends_at->format("Y-m-d h:m:s")), false);
+        $start      = new \Eluceo\iCal\Domain\ValueObject\DateTime(\DateTimeImmutable::createFromFormat( 'Y-m-d H:i:s', $event->event_at ), false);
+        $end        = new \Eluceo\iCal\Domain\ValueObject\DateTime(\DateTimeImmutable::createFromFormat( 'Y-m-d H:i:s', $ends_at->format("Y-m-d H:i:s" ) ), false);
         $occurrence = new \Eluceo\iCal\Domain\ValueObject\TimeSpan($start, $end);
 
        $organizer = new \Eluceo\iCal\Domain\ValueObject\Organizer(
