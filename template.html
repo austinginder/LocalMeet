@@ -223,82 +223,6 @@
 					<v-toolbar-title>Members</v-toolbar-title>
 					<v-spacer></v-spacer>
 					<v-toolbar-items v-show="user.role == 'administrator' || group.owner">
-						<v-dialog max-width="600" v-model="new_event.show" persistent>
-							<template v-slot:activator="{ on, attrs }">
-								<v-btn icon v-bind="attrs" v-on="on"><v-icon large>mdi-plus-box</v-icon></v-btn>
-							</template>
-							<template v-slot:default="dialog">
-							<v-card>
-								<v-toolbar color="primary" dark>
-									<v-toolbar-title>New Event</v-toolbar-title>
-									<v-spacer></v-spacer>
-									<v-toolbar-items>
-										<v-btn icon @click="dialog.value = false"><v-icon large>mdi-close-box</v-icon></v-btn>
-									<v-toolbar-items>
-								</v-toolbar>
-								<v-card-text>
-									<v-row no-gutters>
-										<v-col class="mt-3">
-											<v-text-field label="Name" v-model="new_event.name" no-details></v-text-field>
-										</v-col>
-									</v-row>
-									<v-row no-gutters>
-										<v-col>
-										<v-menu
-											v-model="new_event.date_selector"
-											:close-on-content-click="false"
-											:nudge-right="40"
-											transition="scale-transition"
-											offset-y
-											min-width="290px"
-										>
-											<template v-slot:activator="{ on, attrs }">
-												<v-text-field label="Date" v-model="new_event.date" prepend-icon="mdi-calendar" v-bind="attrs" v-on="on"></v-text-field>
-											</template>
-											<v-date-picker v-model="new_event.date" @input="new_event.date_selector = false"></v-date-picker>
-										</v-menu>
-										</v-col>
-										<v-col>
-										<v-dialog ref="time_picker" v-model="new_event.time_picker" :return-value.sync="new_event.time" persistent width="290px">
-											<template v-slot:activator="{ on, attrs }">
-											<v-text-field
-												v-model="new_event.time"
-												label="Time"
-												prepend-icon="mdi-clock-outline"
-												readonly
-												v-bind="attrs"
-												v-on="on"
-											></v-text-field>
-											</template>
-											<v-time-picker v-if="new_event.time_picker" v-model="new_event.time" full-width>
-											<v-spacer></v-spacer>
-											<v-btn text color="primary" @click="new_event.time_picker = false">
-												Cancel
-											</v-btn>
-											<v-btn text color="primary" @click="$refs.time_picker.save(new_event.time)">
-												OK
-											</v-btn>
-											</v-time-picker>
-										</v-dialog>
-										</v-col>
-									</v-row>
-									<v-row no-gutters>
-										<v-col>
-											<v-text-field label="Location" v-model="new_event.location"></v-text-field>
-										</v-col>
-									</v-row>
-									<v-row no-gutters>
-										<v-col>
-											<v-textarea auto-grow v-model="new_event.description" label="Description" rows="3"><v-textarea>
-										</v-col>
-									</v-row>
-								</v-card-text>
-								<v-card-actions class="justify-end">
-									<v-btn color="primary" @click="addEvent()">Add Event</v-btn>
-								</v-card-actions>
-							</v-card>
-							</template>
-						</v-dialog>
 					<v-toolbar-items>
 				</v-toolbar>
 				<v-list two-line>
@@ -365,7 +289,7 @@
 								</v-menu>
 								</v-col>
 								<v-col>
-								<v-dialog ref="time_picker" v-model="new_event.time_picker" :return-value.sync="new_event.time" persistent width="290px">
+								<v-menu ref="time_picker" v-model="new_event.time_picker" :close-on-content-click="false" :return-value.sync="new_event.time" offset-y width="290px">
 									<template v-slot:activator="{ on, attrs }">
 									<v-text-field
 										v-model="new_event.time"
@@ -376,16 +300,8 @@
 										v-on="on"
 									></v-text-field>
 									</template>
-									<v-time-picker v-if="new_event.time_picker" v-model="new_event.time" full-width>
-									<v-spacer></v-spacer>
-									<v-btn text color="primary" @click="new_event.time_picker = false">
-										Cancel
-									</v-btn>
-									<v-btn text color="primary" @click="$refs.time_picker.save(new_event.time)">
-										OK
-									</v-btn>
-									</v-time-picker>
-								</v-dialog>
+									<v-time-picker v-if="new_event.time_picker" v-model="new_event.time" full-width @click:minute="$refs.time_picker.save(new_event.time)"></v-time-picker>
+								</v-menu>
 								</v-col>
 							</v-row>
 							<v-row no-gutters>
