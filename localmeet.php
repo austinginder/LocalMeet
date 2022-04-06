@@ -458,6 +458,11 @@ function localmeet_attendee_create_func( WP_REST_Request $request ) {
 
 function localmeet_groups_create_func( WP_REST_Request $request ) {
 
+	if ( ! is_admin() ) {
+		$errors[] = "Sorry, only administrator can create groups.";
+		return [ "errors" => $errors ];
+	}
+
 	$post    = json_decode( file_get_contents( 'php://input' ) );
     $request = $post->request;
     $errors  = [];
