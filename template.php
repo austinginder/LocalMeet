@@ -126,6 +126,7 @@ new Vue({
 		},
 	},
 	mounted() {
+		this.fetchGroups()
 		if ( typeof wpApiSettings == "undefined" ) {
 			//window.history.pushState( {}, 'login', "/account/login" )
 			this.logged_in = false
@@ -214,6 +215,7 @@ new Vue({
 			if ( this.route == "" ) {
 				this.group = {}
 				this.organization = {}
+				this.fetchGroups()
 			}
 			if ( this.route == "profile" ) {
 				this.group = {}

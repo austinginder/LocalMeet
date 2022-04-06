@@ -204,16 +204,30 @@
 	</v-list-item>
 </v-navigation-drawer>
 
-	<v-card flat v-if="route == ''" class="text-center">
-	<div class="mt-10 mb-5"></div>
-	<v-row class="text-center" style="max-width:600px;margin:auto">
-		<v-col>
-			<v-btn depressed x-large href="/start-group" @click.prevent="goToPath( '/start-group' )" class="mx-auto mt-7">Start a new group</v-btn>
-		</v-col>
-		<v-col>
-			<v-btn depressed x-large href="/find-group" @click.prevent="goToPath( '/find-group' )" class="mx-auto mt-7">Find a group</v-btn>
-		</v-col>
-	</v-row>
+	<v-card flat v-if="route == ''">
+	<v-container style="max-width: 500px;">
+		<v-text-field label="Find a group." solo v-model="group_search" class="mt-5"></v-text-field>
+		<v-data-table :items="groups" :search="group_search" :headers="[{ text: 'Name', value: 'name' }]" hide-default-header hide-default-footer class="minimal">
+		<template v-slot:body="{ items }">
+			<tbody>
+			  <tr v-for="item in items" :key="item.group_id">
+				<td>
+				<v-hover v-slot="{ hover }">
+				<v-card tile class="mx-auto my-3" max-width="500" :elevation="hover ? 5 : 2" :href="groupHomeLink( item )" @click.prevent="goToPath( groupHomeLink( item ) )">
+					<v-card-title>{{ item.name }}</v-card-title>
+					<v-card-text v-html="item.description"></v-card-text>
+					<v-card-text v-show="item.stats.members || item.stats.events">
+					<span v-if="item.stats.members">{{ item.stats.members }} members</span><span v-show="item.stats.members && item.stats.events">, </span><span v-if="item.stats.events">{{ item.stats.events }} events</span>
+					</v-card-text>
+				</v-card>
+				</v-hover>
+				</td>
+			  </tr>
+			</tbody>
+		  </template>
+		</v-data-table>
+		</v-container>
+		
 		<v-alert color="primary" text type="info" style="max-width:600px;margin:auto" class="mt-10">LocalMeet is an <a href="https://github.com/austinginder/LocalMeet" target="_new">open source</a> meetup tool powered by WordPress.</v-alert>
 	</v-card>
 	<v-card v-if="route == 'group'" flat>
