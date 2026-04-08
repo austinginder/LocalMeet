@@ -4,7 +4,7 @@
  * Plugin Name:       LocalMeet
  * Plugin URI:        https://localmeet.io
  * Description:       Self-starting local meetups
- * Version:           1.0.0
+ * Version:           2.0.0
  * Author:            Austin Ginder
  * Author URI:        https://austinginder.com
  * License:           MIT License
@@ -19,6 +19,40 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 require plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
+
+new LocalMeet\Updater();
+
+function localmeet_generate_username( $email ) {
+	$base = strstr( $email, '@', true );
+	$base = preg_replace( '/[^a-zA-Z0-9]/', '', $base );
+	if ( empty( $base ) ) {
+		$base = 'user';
+	}
+	$username = $base;
+	while ( username_exists( $username ) ) {
+		$username = $base . '-' . substr( bin2hex( random_bytes( 4 ) ), 0, 6 );
+	}
+	return $username;
+}
+
+add_action( 'admin_init', 'localmeet_redirect_non_admins' );
+function localmeet_redirect_non_admins() {
+	if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) {
+		return;
+	}
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_redirect( home_url() );
+		exit;
+	}
+}
+
+add_filter( 'show_admin_bar', 'localmeet_hide_admin_bar' );
+function localmeet_hide_admin_bar( $show ) {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return false;
+	}
+	return $show;
+}
 
 add_filter( 'template_include', 'load_localmeet_template' );
 function load_localmeet_template( $original_template ) {
@@ -82,193 +116,391 @@ function localmeet_register_rest_endpoints() {
 
     register_rest_route(
 		'localmeet/v1', '/login', [
-			'methods'       => 'POST',
-			'callback'      => 'localmeet_login_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_login_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false
 		]
 	);
 
     register_rest_route(
 		'localmeet/v1', '/event/(?P<name>[a-zA-Z0-9-]+)', [
-			'methods'  => 'GET',
-			'callback' => 'localmeet_event_func',
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_event_func',
+			'permission_callback' => '__return_true',
 		]
 	);
 
 	register_rest_route(
 		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/attend', [
-			'methods'  => 'POST',
-			'callback' => 'localmeet_event_attend_func',
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_event_attend_func',
+			'permission_callback' => 'is_user_logged_in',
 		]
 	);
 
 	register_rest_route(
 		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/announce', [
-			'methods'  => 'GET',
-			'callback' => 'localmeet_event_announce_func',
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_event_announce_func',
+			'permission_callback' => 'is_user_logged_in',
 		]
 	);
 
 	register_rest_route(
 		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/delete', [
-			'methods'  => 'GET',
-			'callback' => 'localmeet_event_delete_func',
+			'methods'             => 'DELETE',
+			'callback'            => 'localmeet_event_delete_func',
+			'permission_callback' => 'is_user_logged_in',
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/cancel', [
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_event_cancel_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/notice', [
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_group_notice_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
 		]
 	);
 
 	register_rest_route(
 		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/update', [
-			'methods'       => 'POST',
-			'callback'      => 'localmeet_event_update_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_event_update_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
 		]
 	);
 
 	register_rest_route(
 		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/comment/new', [
-			'methods'       => 'POST',
-			'callback'      => 'localmeet_event_comment_new_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_event_comment_new_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
 		]
 	);
 
 	register_rest_route(
 		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/comment/(?P<comment_id>[a-zA-Z0-9-]+)/update', [
-			'methods'       => 'POST',
-			'callback'      => 'localmeet_event_comment_update_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_event_comment_update_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
 		]
 	);
 
 	register_rest_route(
 		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/comment/delete', [
-			'methods'       => 'POST',
-			'callback'      => 'localmeet_event_comment_delete_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_event_comment_delete_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
 		]
 	);
 
 	register_rest_route(
 		'localmeet/v1', '/events/create', [
-			'methods'       => 'POST',
-			'callback'      => 'localmeet_events_create_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_events_create_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
 		]
 	);
 
 	register_rest_route(
 		'localmeet/v1', '/attendee/create', [
-			'methods'       => 'POST',
-			'callback'      => 'localmeet_attendee_create_func',
-            'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_attendee_create_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false
 		]
 	);
 
 	register_rest_route(
 		'localmeet/v1', '/attendee/create/(?P<token>[a-zA-Z0-9-]+)', [
-			'methods'       => 'GET',
-			'callback'      => 'localmeet_attendee_create_verify_func',
-            'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_attendee_create_verify_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/media/upload', [
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_media_upload_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/media/mine', [
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_media_mine_func',
+			'permission_callback' => 'is_user_logged_in',
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/test-email', [
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_group_test_email_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
 		]
 	);
 
     register_rest_route(
 		'localmeet/v1', '/groups/', [
-			'methods'  => 'GET',
-			'callback' => 'localmeet_groups_func',
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_groups_func',
+			'permission_callback' => '__return_true',
+		]
+	);
+
+    register_rest_route(
+		'localmeet/v1', '/groups/search', [
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_groups_search_func',
+			'permission_callback' => '__return_true',
 		]
 	);
 
     register_rest_route(
 		'localmeet/v1', '/groups/create', [
-			'methods'       => 'POST',
-			'callback'      => 'localmeet_groups_create_func',
-            'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_groups_create_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
 		]
 	);
 
     register_rest_route(
 		'localmeet/v1', '/groups/create/(?P<token>[a-zA-Z0-9-]+)', [
-			'methods'       => 'GET',
-			'callback'      => 'localmeet_groups_create_verify_func',
-            'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_groups_create_verify_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false
 		]
 	);
 
 	register_rest_route(
 		'localmeet/v1', '/group/(?P<name>[a-zA-Z0-9-]+)', [
-			'methods'  => 'GET',
-			'callback' => 'localmeet_group_func',
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_group_func',
+			'permission_callback' => '__return_true',
 		]
 	);
 
 	register_rest_route(
 		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/update', [
-			'methods'       => 'POST',
-			'callback'      => 'localmeet_groups_update_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_groups_update_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
 		]
 	);
 
 	register_rest_route(
 		'localmeet/v1', '/group/join/(?P<token>[a-zA-Z0-9-]+)', [
-			'methods'       => 'GET',
-			'callback'      => 'localmeet_groups_join_verify_func',
-            'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_groups_join_verify_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false
 		]
 	);
 
 	register_rest_route(
 		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/join', [
-			'methods'       => 'GET',
-			'callback'      => 'localmeet_groups_join_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_groups_join_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
 		]
 	);
 
 	register_rest_route(
 		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/join', [
-			'methods'       => 'POST',
-			'callback'      => 'localmeet_groups_join_request_func',
-			'show_in_index' => false
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_groups_join_request_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false
 		]
 	);
 
 	register_rest_route(
 		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/leave', [
-			'methods'       => 'GET',
-			'callback'      => 'localmeet_groups_leave_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_groups_leave_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
 		]
 	);
 
 	register_rest_route(
 		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/leave/(?P<token>[a-zA-Z0-9-]+)', [
-			'methods'       => 'GET',
-			'callback'      => 'localmeet_groups_member_leave_func',
-			'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_groups_member_leave_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false
 		]
 	);
 
 	register_rest_route(
 		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/delete', [
-			'methods'  => 'GET',
-			'callback' => 'localmeet_group_delete_func',
+			'methods'             => 'DELETE',
+			'callback'            => 'localmeet_group_delete_func',
+			'permission_callback' => 'is_user_logged_in',
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/events/search', [
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_events_search_func',
+			'permission_callback' => '__return_true',
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/members/export', [
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_members_export_func',
+			'permission_callback' => 'is_user_logged_in',
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/locations', [
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_locations_list_func',
+			'permission_callback' => 'is_user_logged_in',
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/locations/create', [
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_locations_create_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/location/(?P<location_id>[a-zA-Z0-9-]+)/update', [
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_location_update_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/location/(?P<location_id>[a-zA-Z0-9-]+)/delete', [
+			'methods'             => 'DELETE',
+			'callback'            => 'localmeet_location_delete_func',
+			'permission_callback' => 'is_user_logged_in',
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/transfer', [
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_group_transfer_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/member/(?P<member_id>[0-9]+)/role', [
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_member_role_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
 		]
 	);
 
 	register_rest_route(
 		'localmeet/v1', '/member/get/(?P<token>[a-zA-Z0-9-]+)', [
-			'methods'       => 'GET',
-			'callback'      => 'localmeet_member_get_func',
-            'show_in_index' => false
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_member_get_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/member/mute/(?P<token>[a-zA-Z0-9-]+)', [
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_member_mute_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/group/(?P<group_id>[a-zA-Z0-9-]+)/notifications', [
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_member_notifications_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/comment/(?P<comment_id>[a-zA-Z0-9-]+)/moderate', [
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_event_comment_moderate_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
 		]
 	);
 
     register_rest_route(
 		'localmeet/v1', '/organization/(?P<name>[a-zA-Z0-9-]+)', [
-			'methods'  => 'GET',
-			'callback' => 'localmeet_organization_func',
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_organization_func',
+			'permission_callback' => '__return_true',
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/invite/create', [
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_invite_create_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/invites', [
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_invites_func',
+			'permission_callback' => 'is_user_logged_in',
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/invite/accept/(?P<token>[a-zA-Z0-9]+)', [
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_invite_accept_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false
 		]
 	);
 
@@ -278,7 +510,14 @@ function localmeet_login_func( WP_REST_Request $request ) {
 
 	$post = json_decode( file_get_contents( 'php://input' ) );
 
+	if ( $post->command == "currentUser" ) {
+		return ( new LocalMeet\App )->current_user();
+	}
+
 	if ( $post->command == "reset" ) {
+		if ( ! LocalMeet\RateLimiter::check( 'reset', LocalMeet\RateLimiter::ip(), 3, 600 ) ) {
+			return [ "errors" => "Too many reset attempts. Please try again later." ];
+		}
 
 		$user_data = get_user_by( 'login', $post->login->user_login );
 		if ( ! $user_data ) {
@@ -321,6 +560,9 @@ function localmeet_login_func( WP_REST_Request $request ) {
 	}
 
 	if ( $post->command == "signIn" ) {
+		if ( ! LocalMeet\RateLimiter::check( 'login', LocalMeet\RateLimiter::ip(), 5, 300 ) ) {
+			return [ "errors" => "Too many login attempts. Please try again later." ];
+		}
 		$credentials = [
 			"user_login"    => $post->login->user_login,
 			"user_password" => $post->login->user_password,
@@ -355,7 +597,7 @@ function localmeet_login_func( WP_REST_Request $request ) {
 		}
 		
 		// If new password sent then valid it.
-		if ( $account->new_password != "" ) {
+		if ( ! empty( $account->new_password ) ) {
 
 			$password = $account->new_password;
 
@@ -374,8 +616,10 @@ function localmeet_login_func( WP_REST_Request $request ) {
 		}
 
 		if ( count( $errors ) == 0 ) {
-			$result = wp_update_user( [ 
-				'ID'           => $user_id, 
+			$result = wp_update_user( [
+				'ID'           => $user_id,
+				'first_name'   => $account->first_name ?? '',
+				'last_name'    => $account->last_name ?? '',
 				'display_name' => $account->name,
 				'user_email'   => $account->email,
              ] );
@@ -384,7 +628,7 @@ function localmeet_login_func( WP_REST_Request $request ) {
 			}
 		}
 
-		if ( count( $errors ) == 0 && $account->new_password != "") {
+		if ( count( $errors ) == 0 && ! empty( $account->new_password ) ) {
 			$result = wp_update_user( array( 
 				'ID'        => $user_id, 
 				'user_pass' => $account->new_password,
@@ -404,9 +648,34 @@ function localmeet_login_func( WP_REST_Request $request ) {
 		return $response;
     }
 
+	if ( $post->command == "setPassword" ) {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return [ "errors" => [ "Not logged in." ] ];
+		}
+		$account = new LocalMeet\Account( $user_id );
+		$errors  = $account->set_password( $post->password );
+		if ( count( $errors ) > 0 ) {
+			return [ "errors" => $errors ];
+		}
+		return [ "message" => "Password set." ];
+	}
+
+	if ( $post->command == "myGroups" ) {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return [ "errors" => [ "Not logged in." ] ];
+		}
+		$account = new LocalMeet\Account( $user_id );
+		return $account->groups();
+	}
+
 }
 
-function localmeet_attendee_create_func( WP_REST_Request $request ) { 
+function localmeet_attendee_create_func( WP_REST_Request $request ) {
+	if ( ! LocalMeet\RateLimiter::check( 'rsvp_email', LocalMeet\RateLimiter::ip(), 5, 300 ) ) {
+		return [ "errors" => [ "Too many attempts. Please try again later." ] ];
+	}
 	$post    = json_decode( file_get_contents( 'php://input' ) );
     $request = $post->request;
     $errors  = [];
@@ -429,7 +698,7 @@ function localmeet_attendee_create_func( WP_REST_Request $request ) {
 
 	$valid_token = false;
 	do {
-		$token       = bin2hex( openssl_random_pseudo_bytes( 16 ) );
+		$token       = bin2hex( random_bytes( 32 ) );
 		$token_check = ( new LocalMeet\AttendeeRequests )->where( [ "token" => $token ] );
 		if ( ! $token_check ) {
 			$valid_token = true;
@@ -445,22 +714,14 @@ function localmeet_attendee_create_func( WP_REST_Request $request ) {
 	] );
 
 	$event      = ( new LocalMeet\Events )->get( $request->event_id );
-	$event_at   = date('D M jS Y \a\t h:ia', strtotime( $event->event_at ) );
 	$verify_url = home_url() . "/wp-json/localmeet/v1/attendee/create/$token";
-	$subject    = "LocalMeet - Confirm your RSVP to '{$event->name}' $event_at";
-	$body       = "Thanks for your interest in '{$event->name}' scheduled for $event_at.<br /><br /><a href=\"{$verify_url}\">Confirm your RSVP</a>.";
-	$headers    = [ 'Content-Type: text/html; charset=UTF-8' ];
-
-	// Send email
-	wp_mail( $request->email, $subject, $body, $headers );
+	LocalMeet\Mailer::send_rsvp_verification( $request->email, $event->name, $verify_url );
 
 }
 
 function localmeet_groups_create_func( WP_REST_Request $request ) {
-
-	if ( ! is_admin() ) {
-		$errors[] = "Sorry, only administrator can create groups.";
-		return [ "errors" => $errors ];
+	if ( ! LocalMeet\RateLimiter::check( 'group_create', LocalMeet\RateLimiter::ip(), 3, 600 ) ) {
+		return [ "errors" => [ "Too many attempts. Please try again later." ] ];
 	}
 
 	$post    = json_decode( file_get_contents( 'php://input' ) );
@@ -468,70 +729,158 @@ function localmeet_groups_create_func( WP_REST_Request $request ) {
     $errors  = [];
 	$user    = new LocalMeet\User;
 
+	if ( ! $user->is_admin() && ! LocalMeet\Invite::can_create_group( $user->user_id() ) ) {
+		$errors[] = "You don't have permission to create groups.";
+		return [ "errors" => $errors ];
+	}
+
     if ( $request->name == "" ) {
         $errors[] = "Group name can't be empty.";
     }
 
-	if ( $user->user_id() != 0 ) {
-		$request->email = $user->fetch()->email;
-	}
-
-    if ( ! filter_var( $request->email, FILTER_VALIDATE_EMAIL ) ) {
-        $errors[] = "Email address is not valid.";
+    if ( count ( $errors ) > 0 ) {
+        return [ "errors" => $errors ];
     }
 
-    if ( count ( $errors ) == 0 ) {
-        $valid_token = false;
-        do {
-            $token       = bin2hex( openssl_random_pseudo_bytes( 16 ) );
-            $token_check = ( new LocalMeet\GroupRequests )->where( [ "token" => $token ] );
-            if ( ! $token_check ) {
-                $valid_token = true;
-            }
-        } while ( $valid_token == false );
+    $unique_slug = ( new LocalMeet\Groups )->generate_unique_slug( $request->name );
+    $group_id = ( new LocalMeet\Groups )->insert( [
+        "organization_id" => 0,
+        "name"            => $request->name,
+        "slug"            => $unique_slug,
+        "description"     => $request->description ?? '',
+        "owner_id"        => $user->user_id(),
+    ] );
 
-        ( new LocalMeet\GroupRequests )->insert( [ 
-            "name"        => $request->name,
-            "email"       => $request->email,
-            "description" => $request->description,
-            "token"       => $token 
-        ] );
-        
-        $verify_url = home_url() . "/wp-json/localmeet/v1/groups/create/$token";
-        $subject    = "LocalMeet - Verify new group '{$request->name}'";
-        $body       = "Your almost ready to begin your group '{$request->name}'.<br /><br /><a href=\"{$verify_url}\">Verify and create the new group</a>.";
-        $headers    = [ 'Content-Type: text/html; charset=UTF-8' ];
+    // Auto-join owner as member
+    ( new LocalMeet\Group( $group_id ) )->join();
 
-        // Send email
-        wp_mail( $request->email, $subject, $body, $headers );
-    }
-
-    return [ "errors" => $errors ];
+    return [ "errors" => [], "redirect" => "/group/$unique_slug" ];
 }
 
 function localmeet_event_delete_func( $request ) {
 	$event_id = $request['event_id'];
 	$event    = ( new LocalMeet\Events )->get( $event_id );
-	$group    = ( new LocalMeet\Groups )->get( $event->group_id );
-	$user     = new LocalMeet\User;
-	if ( ! $user->is_admin() && ! $user->user_id() == $group->owner_id ) {
+	if ( empty( $event ) ) {
+		return [ "errors" => [ "Event not found." ] ];
+	}
+	$group = ( new LocalMeet\Groups )->get( $event->group_id );
+	if ( empty( $group ) ) {
+		return [ "errors" => [ "Group not found." ] ];
+	}
+	$user  = new LocalMeet\User;
+	if ( ! $user->can_manage_group( $group ) ) {
 		return [ "errors" => [ "Permission denied." ] ];
 	}
 
-	( new LocalMeet\Events )->delete( $event_id  );
+	( new LocalMeet\Events )->delete( $event_id );
 	return;
 }
 
-function localmeet_event_announce_func( $request ) {
+function localmeet_event_cancel_func( $request ) {
 	$event_id = $request['event_id'];
 	$event    = ( new LocalMeet\Events )->get( $event_id );
-	$group    = ( new LocalMeet\Groups )->get( $event->group_id );
-	$user     = new LocalMeet\User;
-	if ( ! $user->is_admin() && ! $user->user_id() == $group->owner_id ) {
+	if ( empty( $event ) ) {
+		return [ "errors" => [ "Event not found." ] ];
+	}
+	$group = ( new LocalMeet\Groups )->get( $event->group_id );
+	if ( empty( $group ) ) {
+		return [ "errors" => [ "Group not found." ] ];
+	}
+	$user  = new LocalMeet\User;
+	if ( ! $user->can_manage_group( $group ) ) {
 		return [ "errors" => [ "Permission denied." ] ];
 	}
-	( new LocalMeet\Mailer )->announce_event( $event_id );
-	return;
+	( new LocalMeet\Events )->update( [
+		"cancelled_at" => date( "Y-m-d H:i:s" ),
+	], [ "event_id" => $event_id ] );
+
+	$event_at = date( 'l, F jS Y \a\t g:i a', strtotime( $event->event_at ) );
+	return [
+		"message"        => "Event cancelled.",
+		"notice_subject" => "{$event->name} has been cancelled",
+		"notice_message" => "<p><strong>{$event->name}</strong> scheduled for {$event_at} has been cancelled.</p>",
+	];
+}
+
+function localmeet_group_test_email_func( $request ) {
+	$group_id = $request['group_id'];
+	$group    = ( new LocalMeet\Groups )->get( $group_id );
+	if ( empty( $group ) ) {
+		return [ "errors" => [ "Group not found." ] ];
+	}
+	$user = new LocalMeet\User;
+	if ( ! $user->is_admin() && $user->user_id() != $group->owner_id ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	$current_user = wp_get_current_user();
+	$group_data   = ( new LocalMeet\Group( $group_id ) )->fetch();
+	$reply_to     = "Reply-To: {$group_data->reply_to_name} <{$group_data->reply_to_email}>";
+	$group_url    = home_url( "/group/{$group->slug}" );
+	$button       = LocalMeet\Mailer::action_button_public( $group_url, 'View Group' );
+
+	$content = "
+		<p>Hi {$current_user->first_name},</p>
+		<p>This is a test email from <strong>{$group->name}</strong>. If you're reading this, email delivery is working correctly.</p>
+		<p><strong>Reply-To Name:</strong> {$group_data->reply_to_name}<br>
+		<strong>Reply-To Email:</strong> {$group_data->reply_to_email}</p>
+		{$button}
+		<div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #edf2f7; font-size: 13px; color: #a0aec0;'>
+			{$group_data->email_footer}
+		</div>
+	";
+	LocalMeet\Mailer::send_email_with_layout_public(
+		$current_user->user_email,
+		"Test email from {$group->name}",
+		$group->name,
+		'Test Email',
+		$content,
+		[ $reply_to ]
+	);
+	return [ "message" => "Test email sent to {$current_user->user_email}." ];
+}
+
+function localmeet_group_notice_func( $request ) {
+	$group_id = $request['group_id'];
+	$group    = ( new LocalMeet\Groups )->get( $group_id );
+	if ( empty( $group ) ) {
+		return [ "errors" => [ "Group not found." ] ];
+	}
+	$user = new LocalMeet\User;
+	if ( ! $user->can_manage_group( $group ) ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	if ( ! LocalMeet\RateLimiter::check( 'notice', $user->user_id(), 5, 300 ) ) {
+		return [ "errors" => [ "Too many notices. Please try again later." ] ];
+	}
+	$post    = json_decode( $request->get_body() );
+	$subject = sanitize_text_field( $post->subject ?? '' );
+	$message = wp_kses_post( $post->message ?? '' );
+	if ( empty( $subject ) || empty( $message ) ) {
+		return [ "errors" => [ "Subject and message are required." ] ];
+	}
+	LocalMeet\Mailer::send_notice( $group_id, $subject, $message );
+	return [ "message" => "Notice sent." ];
+}
+
+function localmeet_event_announce_func( $request ) {
+	$user     = new LocalMeet\User;
+	$event_id = $request['event_id'];
+	$event    = ( new LocalMeet\Events )->get( $event_id );
+	if ( empty( $event ) ) {
+		return [ "errors" => [ "Event not found." ] ];
+	}
+	$group    = ( new LocalMeet\Groups )->get( $event->group_id );
+	if ( empty( $group ) ) {
+		return [ "errors" => [ "Group not found." ] ];
+	}
+	if ( ! $user->can_manage_group( $group ) ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	if ( ! LocalMeet\RateLimiter::check( 'announce', $user->user_id(), 2, 300 ) ) {
+		return [ "errors" => [ "Too many announcements. Please try again later." ] ];
+	}
+	LocalMeet\Mailer::announce_event( $event_id );
+	return [ "message" => "Announcement sent." ];
 }
 
 function localmeet_event_attend_func( $request ) {
@@ -542,6 +891,23 @@ function localmeet_event_attend_func( $request ) {
 		$going = 1;
 	}
 	$event_id  = $request['event_id'];
+
+	// Capacity check when marking as going
+	if ( $going ) {
+		$event_data  = ( new LocalMeet\Events )->get( $event_id );
+		if ( empty( $event_data ) ) {
+			return [ "errors" => [ "Event not found." ] ];
+		}
+		if ( $event_data->capacity ) {
+			$going_count = ( new LocalMeet\Attendees )->count_where( [ "event_id" => $event_id, "going" => 1 ] );
+			// Exclude current user from count if already RSVP'd
+			$existing = ( new LocalMeet\Attendees )->where( [ "user_id" => $user->user_id, "event_id" => $event_id, "going" => 1 ] );
+			if ( empty( $existing ) && $going_count >= (int) $event_data->capacity ) {
+				return [ "errors" => [ "This event is full." ] ];
+			}
+		}
+	}
+
 	$lookup    = ( new LocalMeet\Attendees )->where( [ "user_id" => $user->user_id, "event_id" => $event_id ] );
 	if ( count( $lookup ) > 0 ) {
 		foreach( $lookup as $attendee ) {
@@ -558,31 +924,90 @@ function localmeet_event_update_func( $request ) {
 	$errors     = [];
 	$edit_event = (object) $request['edit_event'];
 	$event      = (object) $edit_event->event;
+	$user       = new LocalMeet\User;
+	$current    = ( new LocalMeet\Events )->get( $event->event_id );
+	if ( empty( $current ) ) {
+		return [ "errors" => [ "Event not found." ] ];
+	}
+	$group      = ( new LocalMeet\Groups )->get( $current->group_id );
+	if ( empty( $group ) ) {
+		return [ "errors" => [ "Group not found." ] ];
+	}
+	if ( ! $user->can_manage_group( $group ) ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
 	if ( empty( $event->name ) ) {
 		$errors[] = "Name can't be empty.";
 	}
 	if ( count ( $errors ) > 0 ) {
 		return [ "errors" => $errors ];
 	}
-	( new LocalMeet\Events )->update([
-			"name"        => $event->name,
-			"event_at"    => $event->event_at,
-			"description" => $event->description_raw,
-			"summary"     => $event->summary_raw,
-			"location"    => $event->location,
-			"slug"        => $event->slug,
-		],[ "event_id"    => $event->event_id ]);
+	$location = $event->location ?? '';
+	if ( ! empty( $event->location_name ) || ! empty( $event->location_address ) ) {
+		$location = json_encode( [
+			"name"    => $event->location_name ?? '',
+			"address" => $event->location_address ?? '',
+		] );
+	}
+	$event_end_at = $event->event_end_at ?? null;
+	$capacity     = isset( $event->capacity ) && $event->capacity !== '' ? (int) $event->capacity : null;
+	$image_id     = property_exists( $event, 'image_id' ) ? ( ! empty( $event->image_id ) ? (int) $event->image_id : null ) : $current->image_id;
 
-    return $event->event_id;
+	// Regenerate slug when name changes
+	$new_slug = $current->slug;
+	if ( $event->name !== $current->name ) {
+		$new_slug = ( new LocalMeet\Group( $current->group_id ) )->generate_unique_event_slug( $event->name, $current->slug );
+	}
+
+	( new LocalMeet\Events )->update([
+			"name"         => $event->name,
+			"event_at"     => $event->event_at,
+			"event_end_at" => $event_end_at,
+			"capacity"     => $capacity,
+			"description"  => $event->description_raw,
+			"summary"      => $event->summary_raw,
+			"location"     => $location,
+			"slug"         => $new_slug,
+			"image_id"     => $image_id,
+		],[ "event_id"     => $event->event_id ]);
+
+	// Detect time/location changes for optional notice
+	$changes = [];
+	if ( $current->event_at !== $event->event_at ) {
+		$changes[] = "<strong>New date/time:</strong> " . date( 'l, F jS Y \a\t g:i a', strtotime( $event->event_at ) );
+	}
+	if ( $event_end_at !== $current->event_end_at ) {
+		if ( $event_end_at ) {
+			$changes[] = "<strong>New end time:</strong> " . date( 'g:i a', strtotime( $event_end_at ) );
+		}
+	}
+	if ( $location !== $current->location ) {
+		$loc_data = json_decode( $location );
+		if ( $loc_data && is_object( $loc_data ) ) {
+			$parts = array_filter( [ $loc_data->name ?? '', $loc_data->address ?? '' ] );
+			$changes[] = "<strong>New location:</strong> " . implode( ', ', $parts );
+		}
+	}
+
+	$response = [ "event_id" => $event->event_id, "slug" => $new_slug ];
+	if ( ! empty( $changes ) ) {
+		$response["notice_subject"] = "{$event->name} has been updated";
+		$response["notice_message"] = "<p><strong>{$event->name}</strong> has been updated:</p><ul><li>" . implode( "</li><li>", $changes ) . "</li></ul>";
+	}
+    return $response;
 }
 
 function localmeet_event_comment_new_func( $request ) {
 	$errors     = [];
-	$event      = (object) $edit_event->event;
 	$time_now   = date("Y-m-d H:i:s");
 	$user       = new LocalMeet\User;
-	if ( ! $user->is_admin() && ! $user->user_id() ) {
+	if ( ! $user->user_id() ) {
 		return [ "errors" => [ "Permission denied." ] ];
+	}
+	$event_data = ( new LocalMeet\Events )->get( $request['event_id'] );
+	$membership = ( new LocalMeet\Members )->where( [ "user_id" => $user->user_id(), "group_id" => $event_data->group_id, "active" => 1 ] );
+	if ( ! $user->is_admin() && empty( $membership ) ) {
+		return [ "errors" => [ "You must be a group member to comment." ] ];
 	}
 	if ( count ( $errors ) > 0 ) {
 		return [ "errors" => $errors ];
@@ -594,26 +1019,26 @@ function localmeet_event_comment_new_func( $request ) {
 		"created_at"  => $time_now,
 	] );
 
+	LocalMeet\Mailer::notify_organizer_new_comment( $request['event_id'], $request['comment'], $user->user_id() );
+
     return $comment_id;
 }
 
 function localmeet_event_comment_update_func( $request ) {
-	$errors     = [];
-	$event      = (object) $edit_event->event;
-	$time_now   = date("Y-m-d H:i:s");
-	$user       = new LocalMeet\User;
-	if ( ! $user->is_admin() && ! $user->user_id() ) {
+	$user = new LocalMeet\User;
+	if ( ! $user->user_id() ) {
 		return [ "errors" => [ "Permission denied." ] ];
 	}
+	$comment = ( new LocalMeet\Comments )->get( $request['comment_id'] );
 	if ( ! $user->is_admin() && $comment->user_id != $user->user_id() ) {
 		return [ "errors" => [ "Permission denied." ] ];
 	}
-	$comment_id = ( new LocalMeet\Comments )->update( [
+	( new LocalMeet\Comments )->update( [
 		"event_id"    => $request['event_id'],
 		"details"     => $request['comment'],
 	], [ "comment_id"    => $request['comment_id'] ] );
 
-    return $comment_id;
+    return $request['comment_id'];
 }
 
 function localmeet_event_comment_delete_func( $request ) {
@@ -622,7 +1047,10 @@ function localmeet_event_comment_delete_func( $request ) {
 		return [ "errors" => [ "Permission denied." ] ];
 	}
 	$comment = ( new LocalMeet\Comments )->get( $request['comment_id'] );
-	if ( ! $user->is_admin() || $comment->user_id != $user->user_id() ) {
+	if ( empty( $comment ) ) {
+		return [ "errors" => [ "Comment not found." ] ];
+	}
+	if ( ! $user->is_admin() && $comment->user_id != $user->user_id() ) {
 		return [ "errors" => [ "Permission denied." ] ];
 	}
 	( new LocalMeet\Comments )->delete( $comment->comment_id );
@@ -630,30 +1058,86 @@ function localmeet_event_comment_delete_func( $request ) {
 }
 
 function localmeet_events_create_func( $request ) {
-	// TODO: If user has permissions for group, then proceed
 	$time_now = date("Y-m-d H:i:s");
 	$event    = (object) $request['new_event'];
 	$group    = ( new LocalMeet\Groups )->get( $event->group_id );
-	$user     =  new LocalMeet\User;
-	if ( ! $user->is_admin() && ! $user->user_id() == $group->owner_id ) {
+	if ( empty( $group ) ) {
+		return [ "errors" => [ "Group not found." ] ];
+	}
+	$user     = new LocalMeet\User;
+	if ( ! $user->can_manage_group( $group ) ) {
 		return [ "errors" => [ "Permission denied." ] ];
 	}
 
+	$errors = [];
+	if ( empty( $event->name ) ) {
+		$errors[] = "Name is required.";
+	}
+	if ( empty( $event->date ) || empty( $event->time ) ) {
+		$errors[] = "Date and time are required.";
+	}
+	if ( ! empty( $event->date ) && ! empty( $event->time ) ) {
+		$event_at = strtotime( "{$event->date} {$event->time}" );
+		if ( $event_at && $event_at < time() ) {
+			$errors[] = "Event date must be in the future.";
+		}
+	}
+	if ( count( $errors ) > 0 ) {
+		return [ "errors" => $errors ];
+	}
+
+	$location = $event->location ?? '';
+	if ( ! empty( $event->location_name ) || ! empty( $event->location_address ) ) {
+		$location = json_encode( [
+			"name"    => $event->location_name ?? '',
+			"address" => $event->location_address ?? '',
+		] );
+	}
+	$event_end_at = null;
+	if ( ! empty( $event->end_time ) ) {
+		$end_date     = ! empty( $event->end_date ) ? $event->end_date : $event->date;
+		$event_end_at = "{$end_date} {$event->end_time}";
+	}
+	$capacity = ! empty( $event->capacity ) ? (int) $event->capacity : null;
+
+	$recurrence_rule = ! empty( $event->recurrence_rule ) ? sanitize_text_field( $event->recurrence_rule ) : null;
+	$allowed_rules   = [ 'weekly', 'biweekly', 'monthly' ];
+	if ( $recurrence_rule && ! in_array( $recurrence_rule, $allowed_rules ) ) {
+		$recurrence_rule = null;
+	}
+
+	$image_id = ! empty( $event->image_id ) ? (int) $event->image_id : null;
 	$slug     = ( new LocalMeet\Group( $event->group_id ) )->generate_unique_event_slug( $event->name );
     $event_id = ( new LocalMeet\Events )->insert( [
-		"name"        => $event->name,
-		"slug"        => $slug,
-		"group_id"    => $event->group_id,
-		"description" => $event->description,
-		"location"    => $event->location,
-		"event_at"    => "{$event->date} {$event->time}",
+		"name"            => $event->name,
+		"slug"            => $slug,
+		"group_id"        => $event->group_id,
+		"description"     => $event->description,
+		"location"        => $location,
+		"event_at"        => "{$event->date} {$event->time}",
+		"event_end_at"    => $event_end_at,
+		"capacity"        => $capacity,
+		"recurrence_rule" => $recurrence_rule,
+		"image_id"        => $image_id,
 	] );
-	( new LocalMeet\Attendees )->insert( [ 
+	( new LocalMeet\Attendees )->insert( [
 		"created_at" => $time_now,
 		"user_id"    => get_current_user_id(),
 		"event_id"   => $event_id,
 		"going"      => true,
 	] );
+
+	// Generate recurring event instances
+	if ( $recurrence_rule ) {
+		$parent_event = ( new LocalMeet\Events )->get( $event_id );
+		$recurrence   = new LocalMeet\Recurrence( $parent_event );
+		$instances    = $recurrence->generate_instances( 8 );
+		foreach ( $instances as $instance ) {
+			$instance['slug'] = ( new LocalMeet\Group( $event->group_id ) )->generate_unique_event_slug( $instance['name'] );
+			( new LocalMeet\Events )->insert( $instance );
+		}
+	}
+
     return $event_id;
 }
 
@@ -663,10 +1147,156 @@ function localmeet_group_delete_func( $request ) {
 		return [ "errors" => [ "Group not found." ] ];
 	}
 	$user  = new LocalMeet\User;
-	if ( ! $user->is_admin() && ! $user->user_id() == $group->owner_id ) {
+	if ( ! $user->can_manage_group( $group ) ) {
 		return [ "errors" => [ "Permission denied." ] ];
 	}
+	// Capture members before deletion for notification
+	$members = ( new LocalMeet\Members )->where( [ 'group_id' => $group->group_id, 'active' => 1 ] );
 	( new LocalMeet\Groups )->delete( $group->group_id );
+	LocalMeet\Mailer::notify_members_group_deleted( $group, $members ?: [] );
+	return;
+}
+
+function localmeet_events_search_func( $request ) {
+	$search   = sanitize_text_field( $_GET['q'] ?? '' );
+	$group_id = $request['group_id'];
+	$group    = ( new LocalMeet\Groups )->get( $group_id );
+	if ( ! $group ) {
+		return [ "errors" => [ "Group not found." ] ];
+	}
+	if ( strlen( $search ) < 2 ) {
+		return [ "upcoming" => [], "past" => [] ];
+	}
+	$all_matches = ( new LocalMeet\Events )->search( $search, [ 'name', 'description' ], 50, 0 );
+	$time_now    = ( new \DateTime("now", new \DateTimeZone( get_option('timezone_string') ) ) )->format('Y-m-d H:i:s');
+	$upcoming    = [];
+	$past        = [];
+	foreach ( $all_matches as $event ) {
+		if ( $event->group_id != $group->group_id ) {
+			continue;
+		}
+		if ( $event->event_at > $time_now ) {
+			$upcoming[] = $event;
+		} else {
+			$past[] = $event;
+		}
+	}
+	return [ "upcoming" => $upcoming, "past" => $past ];
+}
+
+function localmeet_members_export_func( $request ) {
+	$user  = new LocalMeet\User;
+	$group = ( new LocalMeet\Groups )->get( $request['group_id'] );
+	if ( empty( $group ) ) {
+		return [ "errors" => [ "Group not found." ] ];
+	}
+	if ( ! $user->can_manage_group( $group ) ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	// Export all members (active and inactive) so organizers have full history
+	$all_members = ( new LocalMeet\Members )->where( [ "group_id" => $group->group_id ] );
+	$csv         = "First Name,Last Name,Email,Status,Joined,Left\n";
+	foreach ( $all_members as $member ) {
+		$wp_user = get_user_by( 'ID', $member->user_id );
+		if ( ! $wp_user ) continue;
+		$first  = str_replace( '"', '""', $wp_user->first_name );
+		$last   = str_replace( '"', '""', $wp_user->last_name );
+		$email  = str_replace( '"', '""', $wp_user->user_email );
+		$status = $member->active ? 'Active' : 'Left';
+		$joined = $member->created_at ?? '';
+		$left   = ( property_exists( $member, 'left_at' ) && $member->left_at ) ? $member->left_at : '';
+		$csv   .= "\"{$first}\",\"{$last}\",\"{$email}\",\"{$status}\",\"{$joined}\",\"{$left}\"\n";
+	}
+	header( 'Content-Type: text/csv; charset=utf-8' );
+	header( 'Content-Disposition: attachment; filename="' . sanitize_file_name( $group->slug ) . '-members.csv"' );
+	echo $csv;
+	exit();
+}
+
+function localmeet_locations_list_func( $request ) {
+	$user  = new LocalMeet\User;
+	$group = ( new LocalMeet\Groups )->get( $request['group_id'] );
+	if ( empty( $group ) ) {
+		return [ "errors" => [ "Group not found." ] ];
+	}
+	if ( ! $user->can_manage_group( $group ) ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	$locations = ( new LocalMeet\Locations )->where( [ "group_id" => $group->group_id ] );
+	return $locations ?: [];
+}
+
+function localmeet_locations_create_func( $request ) {
+	$user  = new LocalMeet\User;
+	$group = ( new LocalMeet\Groups )->get( $request['group_id'] );
+	if ( empty( $group ) ) {
+		return [ "errors" => [ "Group not found." ] ];
+	}
+	if ( ! $user->can_manage_group( $group ) ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	$location = (object) $request['location'];
+	$errors   = [];
+	if ( empty( $location->name ) ) {
+		$errors[] = "Name is required.";
+	}
+	if ( count( $errors ) > 0 ) {
+		return [ "errors" => $errors ];
+	}
+	$time_now    = date("Y-m-d H:i:s");
+	$location_id = ( new LocalMeet\Locations )->insert( [
+		"group_id"   => $group->group_id,
+		"name"       => $location->name,
+		"address"    => $location->address ?? "",
+		"notes"      => $location->notes ?? "",
+		"created_at" => $time_now,
+	] );
+	return $location_id;
+}
+
+function localmeet_location_update_func( $request ) {
+	$user  = new LocalMeet\User;
+	$group = ( new LocalMeet\Groups )->get( $request['group_id'] );
+	if ( empty( $group ) ) {
+		return [ "errors" => [ "Group not found." ] ];
+	}
+	if ( ! $user->can_manage_group( $group ) ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	$current = ( new LocalMeet\Locations )->get( $request['location_id'] );
+	if ( empty( $current ) || $current->group_id != $group->group_id ) {
+		return [ "errors" => [ "Location not found." ] ];
+	}
+	$location = (object) $request['location'];
+	$errors   = [];
+	if ( empty( $location->name ) ) {
+		$errors[] = "Name is required.";
+	}
+	if ( count( $errors ) > 0 ) {
+		return [ "errors" => $errors ];
+	}
+	( new LocalMeet\Locations )->update( [
+		"name"    => $location->name,
+		"address" => $location->address ?? "",
+		"notes"   => $location->notes ?? "",
+	], [ "location_id" => $current->location_id ] );
+	return $current->location_id;
+}
+
+function localmeet_location_delete_func( $request ) {
+	$user  = new LocalMeet\User;
+	$group = ( new LocalMeet\Groups )->get( $request['group_id'] );
+	if ( empty( $group ) ) {
+		return [ "errors" => [ "Group not found." ] ];
+	}
+	if ( ! $user->can_manage_group( $group ) ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	$current = ( new LocalMeet\Locations )->get( $request['location_id'] );
+	if ( empty( $current ) || $current->group_id != $group->group_id ) {
+		return [ "errors" => [ "Location not found." ] ];
+	}
+	( new LocalMeet\Locations )->delete( $current->location_id );
 	return;
 }
 
@@ -684,7 +1314,7 @@ function localmeet_groups_join_verify_func( $request ) {
 					"first_name" => $r->first_name,
 					"last_name"  => $r->last_name,
                     'user_email' => $r->email,
-                    'user_login' => $r->email,
+                    'user_login' => localmeet_generate_username( $r->email ),
                     'role'       => 'subscriber'
                 ];
                 $user_id = wp_insert_user( $new_user );
@@ -707,6 +1337,7 @@ function localmeet_groups_join_verify_func( $request ) {
 			}
 
             ( new LocalMeet\MemberRequests )->delete( $r->member_request_id );
+            LocalMeet\Mailer::notify_organizer_new_member( $r->group_id, $user->ID );
 
             // Login as user
             wp_set_current_user( $user->ID, $r->email );
@@ -720,11 +1351,18 @@ function localmeet_groups_join_verify_func( $request ) {
 
 function localmeet_groups_join_func( $request ) {
 	( new LocalMeet\Group( $request['group_id'] ) )->join();
+	LocalMeet\Mailer::notify_organizer_new_member( $request['group_id'], get_current_user_id() );
 	return;
 }
 
 function localmeet_groups_leave_func( $request ) {
+	$user_id = get_current_user_id();
+	$group   = ( new LocalMeet\Groups )->get( $request['group_id'] );
+	if ( $group && $user_id == $group->owner_id ) {
+		return [ "errors" => [ "Group organizers can't leave their own group." ] ];
+	}
 	( new LocalMeet\Group( $request['group_id'] ) )->leave();
+	LocalMeet\Mailer::notify_organizer_member_left( $request['group_id'], $user_id );
 	return;
 }
 
@@ -736,12 +1374,18 @@ function localmeet_groups_member_leave_func( $request ) {
 	if ( empty( $member_id ) ) {
 		return "Not found";
 	}
-	$created_at = ( new LocalMeet\Members )->get( $member_id )->created_at;
-	$member     = new LocalMeet\Member( $member_id );
-	if ( md5( $created_at ) != $token ) {
+	$member_data = ( new LocalMeet\Members )->get( $member_id );
+	if ( ! $member_data || wp_hash( $member_data->created_at ) !== $token ) {
 		return "Not found";
 	}
+	$leaving_user_id  = $member_data->user_id;
+	$leaving_group_id = $member_data->group_id;
+	$group = ( new LocalMeet\Groups )->get( $leaving_group_id );
+	if ( $group && $leaving_user_id == $group->owner_id ) {
+		return "Group organizers can't leave their own group.";
+	}
 	( new LocalMeet\Member( $member_id ) )->leave();
+	LocalMeet\Mailer::notify_organizer_member_left( $leaving_group_id, $leaving_user_id );
 	return;
 }
 
@@ -753,15 +1397,140 @@ function localmeet_member_get_func( $request ) {
 	if ( empty( $member_id ) ) {
 		return "Not found";
 	}
-	$created_at = ( new LocalMeet\Members )->get( $member_id )->created_at;
-	$member     = new LocalMeet\Member( $member_id );
-	if ( md5( $created_at ) != $token ) {
+	$member_data = ( new LocalMeet\Members )->get( $member_id );
+	if ( ! $member_data || wp_hash( $member_data->created_at ) !== $token ) {
 		return "Not found";
 	}
+	$member = new LocalMeet\Member( $member_id );
 	return $member->fetch();
 }
 
+function localmeet_member_mute_func( $request ) {
+	$token     = $request['token'];
+	$parts     = explode( "-", $token, 2 );
+	$member_id = $parts[0];
+	$hash      = $parts[1] ?? '';
+	if ( empty( $member_id ) ) {
+		return "Not found";
+	}
+	$member_data = ( new LocalMeet\Members )->get( $member_id );
+	if ( ! $member_data || wp_hash( $member_data->created_at ) !== $hash ) {
+		return "Not found";
+	}
+	( new LocalMeet\Members )->update( [ "email_notifications" => 0 ], [ "member_id" => $member_id ] );
+	$group = ( new LocalMeet\Groups )->get( $member_data->group_id );
+	wp_redirect( "/group/{$group->slug}?muted=confirmed" );
+	exit();
+}
+
+function localmeet_member_notifications_func( $request ) {
+	$user     = new LocalMeet\User;
+	$group_id = $request['group_id'];
+	$post     = json_decode( file_get_contents( 'php://input' ) );
+	$enabled  = ! empty( $post->enabled ) ? 1 : 0;
+	$membership = ( new LocalMeet\Members )->where( [ "user_id" => $user->user_id(), "group_id" => $group_id, "active" => 1 ] );
+	if ( empty( $membership ) ) {
+		return [ "errors" => [ "Not a member." ] ];
+	}
+	( new LocalMeet\Members )->update( [ "email_notifications" => $enabled ], [ "member_id" => $membership[0]->member_id ] );
+	return [ "email_notifications" => (bool) $enabled ];
+}
+
+function localmeet_group_transfer_func( $request ) {
+	$user  = new LocalMeet\User;
+	$group = ( new LocalMeet\Groups )->get( $request['group_id'] );
+	if ( empty( $group ) ) {
+		return [ "errors" => [ "Group not found." ] ];
+	}
+	// Only the current owner or a site admin can transfer
+	if ( ! $user->is_admin() && $user->user_id() != $group->owner_id ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	$post        = json_decode( file_get_contents( 'php://input' ) );
+	$new_owner_id = (int) ( $post->user_id ?? 0 );
+	if ( empty( $new_owner_id ) || $new_owner_id == $group->owner_id ) {
+		return [ "errors" => [ "Invalid user." ] ];
+	}
+	// Verify the new owner is an active member
+	$membership = ( new LocalMeet\Members )->where( [ "user_id" => $new_owner_id, "group_id" => $group->group_id, "active" => 1 ] );
+	if ( empty( $membership ) ) {
+		return [ "errors" => [ "User must be an active member." ] ];
+	}
+	( new LocalMeet\Groups )->update( [ "owner_id" => $new_owner_id ], [ "group_id" => $group->group_id ] );
+	// Notify the new organizer
+	$new_owner = get_userdata( $new_owner_id );
+	if ( $new_owner ) {
+		LocalMeet\Mailer::send_role_notification( $new_owner->user_email, $group->name, 'organizer', $group->slug );
+	}
+	return [ "success" => true ];
+}
+
+function localmeet_member_role_func( $request ) {
+	$user  = new LocalMeet\User;
+	$group = ( new LocalMeet\Groups )->get( $request['group_id'] );
+	if ( empty( $group ) ) {
+		return [ "errors" => [ "Group not found." ] ];
+	}
+	// Only site admins and the group owner can change roles (not managers)
+	if ( ! $user->is_admin() && $user->user_id() != $group->owner_id ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	$member = ( new LocalMeet\Members )->get( $request['member_id'] );
+	if ( empty( $member ) || $member->group_id != $group->group_id || ! $member->active ) {
+		return [ "errors" => [ "Member not found." ] ];
+	}
+	// Can't change the owner's role
+	if ( $member->user_id == $group->owner_id ) {
+		return [ "errors" => [ "Can't change the organizer's role." ] ];
+	}
+	$post         = json_decode( file_get_contents( 'php://input' ) );
+	$new_role     = $post->role ?? '';
+	$allowed_roles = [ 'member', 'manager' ];
+	if ( ! in_array( $new_role, $allowed_roles ) ) {
+		return [ "errors" => [ "Invalid role." ] ];
+	}
+	( new LocalMeet\Members )->update( [ "role" => $new_role ], [ "member_id" => $member->member_id ] );
+	// Notify member of promotion
+	if ( $new_role === 'manager' ) {
+		$member_user = get_userdata( $member->user_id );
+		if ( $member_user ) {
+			LocalMeet\Mailer::send_role_notification( $member_user->user_email, $group->name, 'manager', $group->slug );
+		}
+	}
+	return [ "member_id" => $member->member_id, "role" => $new_role ];
+}
+
+function localmeet_event_comment_moderate_func( $request ) {
+	$user    = new LocalMeet\User;
+	$comment = ( new LocalMeet\Comments )->get( $request['comment_id'] );
+	if ( ! $comment ) {
+		return [ "errors" => [ "Comment not found." ] ];
+	}
+	$event = ( new LocalMeet\Events )->get( $comment->event_id );
+	if ( empty( $event ) ) {
+		return [ "errors" => [ "Event not found." ] ];
+	}
+	$group = ( new LocalMeet\Groups )->get( $event->group_id );
+	if ( empty( $group ) ) {
+		return [ "errors" => [ "Group not found." ] ];
+	}
+	if ( ! $user->can_manage_group( $group ) ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	$post   = json_decode( file_get_contents( 'php://input' ) );
+	$action = $post->action ?? '';
+	if ( $action === 'approve' ) {
+		( new LocalMeet\Comments )->update( [ "status" => "approved" ], [ "comment_id" => $comment->comment_id ] );
+	} elseif ( $action === 'reject' ) {
+		( new LocalMeet\Comments )->delete( $comment->comment_id );
+	}
+	return [ "success" => true ];
+}
+
 function localmeet_groups_join_request_func( $request ) {
+	if ( ! LocalMeet\RateLimiter::check( 'join_email', LocalMeet\RateLimiter::ip(), 5, 300 ) ) {
+		return [ "errors" => [ "Too many attempts. Please try again later." ] ];
+	}
 	$group_id    = $request['group_id'];
 	$request     = (object) $request['request'];
 	$errors      = [];
@@ -782,7 +1551,7 @@ function localmeet_groups_join_request_func( $request ) {
 	}
 
 	do {
-		$token       = bin2hex( openssl_random_pseudo_bytes( 16 ) );
+		$token       = bin2hex( random_bytes( 32 ) );
 		$token_check = ( new LocalMeet\MemberRequests )->where( [ "token" => $token ] );
 		if ( ! $token_check ) {
 			$valid_token = true;
@@ -800,12 +1569,7 @@ function localmeet_groups_join_request_func( $request ) {
 
 	$group      = ( new LocalMeet\Groups )->get( $group_id );
 	$verify_url = home_url() . "/wp-json/localmeet/v1/group/join/$token";
-	$subject    = "LocalMeet - Confirm joining group '{$group->name}'";
-	$body       = "Thanks for your interest in joining '{$group->name}'.<br /><br /><a href=\"{$verify_url}\">Confirm joining group</a>.";
-	$headers    = [ 'Content-Type: text/html; charset=UTF-8' ];
-
-	// Send email
-	wp_mail( $request->email, $subject, $body, $headers );
+	LocalMeet\Mailer::send_member_join_verification( $request->email, $group->name, $verify_url );
 	return $request;
 }
 
@@ -813,13 +1577,28 @@ function localmeet_groups_update_func( $request ) {
 	$errors = [];
 	$edit_group = (object) $request['edit_group'];
 	$group      = (object) $edit_group->group;
+	$user       = new LocalMeet\User;
+	$current    = ( new LocalMeet\Groups )->get( $group->group_id );
+	if ( ! $user->can_manage_group( $current ) ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
 	if ( empty( $group->name ) ) {
 		$errors[] = "Name can't be empty.";
+	}
+	if ( empty( $group->slug ) ) {
+		$errors[] = "Slug can't be empty.";
+	}
+	// Validate slug format and uniqueness
+	$slug = sanitize_title( $group->slug );
+	if ( $slug !== $current->slug ) {
+		$existing = ( new LocalMeet\Groups )->where( [ "slug" => $slug ] );
+		if ( $existing ) {
+			$errors[] = "That slug is already taken.";
+		}
 	}
 	if ( count ( $errors ) > 0 ) {
 		return [ "errors" => $errors ];
 	}
-	$current = ( new LocalMeet\Groups )->get( $group->group_id );
 	$details                 = empty( $current->details ) ? (object) [] : json_decode( $current->details );
 	$details->email_footer   = $group->email_footer_raw;
 	$details->reply_to_name  = $group->reply_to_name;
@@ -828,9 +1607,9 @@ function localmeet_groups_update_func( $request ) {
 		"name"        => $group->name,
 		"description" => $group->description_raw,
 		"details"     => json_encode( $details ),
-		"slug"        => $group->slug,
+		"slug"        => $slug,
 	],[ "group_id"    => $group->group_id ]);
-	return $group->group_id;
+	return [ "group_id" => $group->group_id, "slug" => $slug ];
 }
 
 function localmeet_attendee_create_verify_func( $request ) {
@@ -848,13 +1627,23 @@ function localmeet_attendee_create_verify_func( $request ) {
 					"first_name" => $r->first_name,
 					"last_name"  => $r->last_name,
                     'user_email' => $r->email,
-                    'user_login' => $r->email,
+                    'user_login' => localmeet_generate_username( $r->email ),
                     'role'       => 'subscriber'
                 ];
                 $user_id = wp_insert_user( $new_user );
                 $user    = (object) [ "ID" => $user_id ];
                 update_user_meta( $user->ID, 'localmeet_password_not_set', true );
             }
+			// Capacity check
+			if ( $event->capacity ) {
+				$going_count = ( new LocalMeet\Attendees )->count_where( [ "event_id" => $r->event_id, "going" => 1 ] );
+				$existing    = ( new LocalMeet\Attendees )->where( [ "user_id" => $user->ID, "event_id" => $r->event_id, "going" => 1 ] );
+				if ( empty( $existing ) && $going_count >= (int) $event->capacity ) {
+					( new LocalMeet\AttendeeRequests )->delete( $r->attendee_request_id );
+					wp_redirect( "/group/{$group->slug}/{$event->slug}?rsvp=full" );
+					exit();
+				}
+			}
 			$rsvp_checks = ( new LocalMeet\Attendees )->where( [ "user_id" => $user->ID, "event_id" => $r->event_id] );
 			foreach( $rsvp_checks as $rsvp_check ) {
 				( new LocalMeet\Attendees )->delete( $rsvp_check->attendee_id );
@@ -878,8 +1667,80 @@ function localmeet_attendee_create_verify_func( $request ) {
     }
 }
 
+function localmeet_media_upload_func( $request ) {
+	if ( empty( $_FILES['file'] ) ) {
+		return new \WP_Error( 'no_file', 'No file uploaded.', [ 'status' => 400 ] );
+	}
+
+	require_once ABSPATH . 'wp-admin/includes/image.php';
+	require_once ABSPATH . 'wp-admin/includes/file.php';
+	require_once ABSPATH . 'wp-admin/includes/media.php';
+
+	// Temporarily grant upload capability for subscribers
+	$user_id = get_current_user_id();
+	$grant_cap = function( $allcaps ) {
+		$allcaps['upload_files'] = true;
+		return $allcaps;
+	};
+	add_filter( 'user_has_cap', $grant_cap );
+
+	$attachment_id = media_handle_upload( 'file', 0 );
+
+	remove_filter( 'user_has_cap', $grant_cap );
+
+	if ( is_wp_error( $attachment_id ) ) {
+		return [ 'errors' => [ $attachment_id->get_error_message() ] ];
+	}
+
+	wp_update_post( [ 'ID' => $attachment_id, 'post_author' => $user_id ] );
+
+	return [
+		'id'        => $attachment_id,
+		'url'       => wp_get_attachment_image_url( $attachment_id, 'large' ),
+		'thumbnail' => wp_get_attachment_image_url( $attachment_id, 'medium' ),
+	];
+}
+
+function localmeet_media_mine_func( $request ) {
+	$images = get_posts( [
+		'post_type'      => 'attachment',
+		'post_mime_type' => 'image',
+		'author'         => get_current_user_id(),
+		'posts_per_page' => 50,
+		'orderby'        => 'date',
+		'order'          => 'DESC',
+		'post_status'    => 'inherit',
+	] );
+
+	$results = [];
+	foreach ( $images as $img ) {
+		$results[] = [
+			'id'        => $img->ID,
+			'url'       => wp_get_attachment_image_url( $img->ID, 'large' ),
+			'thumbnail' => wp_get_attachment_image_url( $img->ID, 'medium' ),
+		];
+	}
+	return $results;
+}
+
 function localmeet_groups_func( $request ) {
-	return ( new LocalMeet\Groups )->list();
+	$per_page = min( 50, max( 1, (int) ( $_GET['per_page'] ?? 20 ) ) );
+	$page     = max( 1, (int) ( $_GET['page'] ?? 1 ) );
+	$groups   = ( new LocalMeet\Groups )->list( $per_page, $page );
+	$total    = ( new LocalMeet\Groups )->count_all();
+	return [ "groups" => $groups, "total" => $total, "page" => $page, "per_page" => $per_page ];
+}
+
+function localmeet_groups_search_func( $request ) {
+	$search   = sanitize_text_field( $_GET['q'] ?? '' );
+	if ( strlen( $search ) < 2 ) {
+		return [ "groups" => [], "total" => 0 ];
+	}
+	$page     = max( 1, (int) ( $_GET['page'] ?? 1 ) );
+	$per_page = min( 50, max( 1, (int) ( $_GET['per_page'] ?? 20 ) ) );
+	$offset   = ( $page - 1 ) * $per_page;
+	$groups   = ( new LocalMeet\Groups )->search_groups( $search, $per_page, $offset );
+	return [ "groups" => $groups, "total" => count( $groups ), "page" => $page ];
 }
 
 function localmeet_groups_create_verify_func( $request ) {
@@ -891,7 +1752,7 @@ function localmeet_groups_create_verify_func( $request ) {
             if ( ! $user ) {
                 $new_user = [
                     'user_email' => $r->email,
-                    'user_login' => $r->email,
+                    'user_login' => localmeet_generate_username( $r->email ),
                     'role'       => 'subscriber'
                 ];
                 $user_id = wp_insert_user( $new_user );
@@ -899,7 +1760,7 @@ function localmeet_groups_create_verify_func( $request ) {
                 update_user_meta( $user->ID, 'localmeet_password_not_set', true );
             }
             $unique_slug = ( new LocalMeet\Groups )->generate_unique_slug( $r->name );
-            ( new LocalMeet\Groups )->insert( [
+            $group_id = ( new LocalMeet\Groups )->insert( [
                 "organization_id" => 0,
                 "name"        => $r->name,
                 "slug"        => $unique_slug,
@@ -907,7 +1768,15 @@ function localmeet_groups_create_verify_func( $request ) {
                 "owner_id"    => $user->ID,
             ] );
 
-            ( new LocalMeet\GroupRequests )->delete( $request->group_request_id );
+            // Auto-join owner as member
+            ( new LocalMeet\Members )->insert( [
+                "created_at" => date( "Y-m-d H:i:s" ),
+                "user_id"    => $user->ID,
+                "group_id"   => $group_id,
+                "active"     => 1,
+            ] );
+
+            ( new LocalMeet\GroupRequests )->delete( $r->group_request_id );
 
             // Login as user
             wp_set_current_user( $user->ID, $r->email );
@@ -930,15 +1799,18 @@ function localmeet_event_func( $request ) {
         }
     }
     $group  = ( new LocalMeet\Groups )->where( [ "slug" => $group, "organization_id" => $organization_id ] );
-    if ( $group && isset( $group[0] ) ) { 
-        $group_id = $group[0]->group_id;
+    if ( ! $group || ! isset( $group[0] ) ) {
+        return new WP_Error( 'not_found', 'Group not found.', [ 'status' => 404 ] );
     }
+    $group_id = $group[0]->group_id;
     $name   = $request['name'];
     $lookup = ( new LocalMeet\Events )->where(  [ "slug" => $name, "group_id" => $group_id ] );
     if ( count( $lookup ) != 1 ) {
         return new WP_Error( 'not_found', 'Event not found.', [ 'status' => 404 ] );
     }
-	$event = ( new LocalMeet\Event( $lookup[0]->event_id ) )->fetch();
+	$comments_per_page = min( 100, max( 1, (int) ( $_GET['comments_per_page'] ?? 50 ) ) );
+	$comments_page     = max( 1, (int) ( $_GET['comments_page'] ?? 1 ) );
+	$event = ( new LocalMeet\Event( $lookup[0]->event_id ) )->fetch( $comments_per_page, $comments_page );
 
 	return $event;
 }
@@ -957,7 +1829,9 @@ function localmeet_group_func( $request ) {
     if ( count( $lookup ) != 1 ) {
         return new WP_Error( 'not_found', 'Group not found.', [ 'status' => 404 ] );
     }
-    $group = ( new LocalMeet\Group( $lookup[0]->group_id ) )->fetch();
+    $events_per_page = min( 50, max( 1, (int) ( $_GET['events_per_page'] ?? 20 ) ) );
+    $events_page     = max( 1, (int) ( $_GET['events_page'] ?? 1 ) );
+    $group = ( new LocalMeet\Group( $lookup[0]->group_id ) )->fetch( $events_per_page, $events_page );
 	return $group;
 }
 
@@ -972,11 +1846,119 @@ function localmeet_organization_func( $request ) {
 	return $lookup[0];
 }
 
+function localmeet_invite_create_func( WP_REST_Request $request ) {
+	$user = new LocalMeet\User;
+	if ( ! $user->is_admin() ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+
+	$post    = json_decode( file_get_contents( 'php://input' ) );
+	$invite  = $post->invite;
+	$errors  = [];
+
+	if ( empty( $invite->email ) || ! filter_var( $invite->email, FILTER_VALIDATE_EMAIL ) ) {
+		$errors[] = "Valid email address is required.";
+	}
+	if ( empty( $invite->group_allowance ) || $invite->group_allowance < 1 ) {
+		$errors[] = "Group allowance must be at least 1.";
+	}
+	if ( count( $errors ) > 0 ) {
+		return [ "errors" => $errors ];
+	}
+
+	$valid_token = false;
+	do {
+		$token       = bin2hex( random_bytes( 32 ) );
+		$token_check = ( new LocalMeet\Invites )->where( [ "token" => $token ] );
+		if ( ! $token_check ) {
+			$valid_token = true;
+		}
+	} while ( $valid_token == false );
+
+	$time_now = date( 'Y-m-d H:i:s' );
+	( new LocalMeet\Invites )->insert( [
+		"email"           => $invite->email,
+		"group_allowance" => (int) $invite->group_allowance,
+		"token"           => $token,
+		"created_at"      => $time_now,
+	] );
+
+	$accept_url = home_url() . "/wp-json/localmeet/v1/invite/accept/{$token}";
+	LocalMeet\Mailer::send_invite( $invite->email, (int) $invite->group_allowance, $accept_url );
+
+	return [ "message" => "Invite sent to {$invite->email}" ];
+}
+
+function localmeet_invites_func( WP_REST_Request $request ) {
+	$user = new LocalMeet\User;
+	if ( ! $user->is_admin() ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	$invites = ( new LocalMeet\Invites )->all();
+	if ( ! is_array( $invites ) ) {
+		return [];
+	}
+	foreach ( $invites as $invite ) {
+		if ( $invite->accepted_by ) {
+			$wp_user = get_user_by( 'id', $invite->accepted_by );
+			if ( $wp_user ) {
+				$invite->accepted_name = $wp_user->display_name;
+			}
+		}
+	}
+	return $invites;
+}
+
+function localmeet_invite_accept_func( WP_REST_Request $request ) {
+	$token  = $request['token'];
+	$lookup = ( new LocalMeet\Invites )->where( [ "token" => $token ] );
+
+	if ( ! $lookup || count( $lookup ) != 1 ) {
+		return new WP_Error( 'not_found', 'Invalid or expired invite.', [ 'status' => 404 ] );
+	}
+
+	$invite = $lookup[0];
+
+	if ( ! empty( $invite->accepted_at ) ) {
+		wp_redirect( home_url( '/start-group' ) );
+		exit;
+	}
+
+	$user = get_user_by( 'email', $invite->email );
+	if ( ! $user ) {
+		$new_user = [
+			'user_email' => $invite->email,
+			'user_login' => localmeet_generate_username( $invite->email ),
+			'user_pass'  => wp_generate_password(),
+			'role'       => 'subscriber',
+		];
+		$user_id = wp_insert_user( $new_user );
+		update_user_meta( $user_id, 'localmeet_password_not_set', true );
+	} else {
+		$user_id = $user->ID;
+	}
+
+	$current_allowance = (int) get_user_meta( $user_id, 'localmeet_group_allowance', true );
+	update_user_meta( $user_id, 'localmeet_group_allowance', $current_allowance + (int) $invite->group_allowance );
+
+	( new LocalMeet\Invites )->update( [
+		"accepted_at" => date( 'Y-m-d H:i:s' ),
+		"accepted_by" => $user_id,
+	], [ "invite_id" => $invite->invite_id ] );
+
+	wp_set_current_user( $user_id );
+	wp_set_auth_cookie( $user_id );
+	wp_redirect( home_url( '/start-group' ) );
+	exit;
+}
+
 // Makes sure that any request going to /account/... will respond with a proper 200 http code
 add_action( 'init', 'localmeet_rewrites_init' );
 function localmeet_rewrites_init(){
-	$pages = [ 
+	$pages = [
+		'^start-group',
 		'^find-group',
+		'^admin/invites',
 		'^group/(.+)',
 		'^group/(.+)/(.+)',
 	];
@@ -989,8 +1971,10 @@ function localmeet_rewrites_init(){
 add_filter('redirect_canonical', 'disable_redirection_for_localmeet');
 function disable_redirection_for_localmeet($redirect_url) {
 	global $wp;
-	$pages = [ 
+	$pages = [
+		'start-group',
 		'find-group',
+		'admin/',
 		'group/',
 	];
 	foreach( $pages as $page ) {
@@ -1001,111 +1985,198 @@ function disable_redirection_for_localmeet($redirect_url) {
     return $redirect_url;
 }
 
-function localmeet_meta_description() {
-	global $wp;
-	if ( empty( $wp->request ) ) {
-		echo "Self-starting local meetups";
-		return;
-	}
-}
+function localmeet_seo_data() {
+	static $cache = null;
+	if ( $cache !== null ) return $cache;
 
-function localmeet_content() {
 	global $wp;
+	$site_name = get_bloginfo( 'name' );
+	$data = [
+		'title'       => $site_name,
+		'description' => 'Self-starting local meetups',
+		'og_image'    => '',
+		'og_type'     => 'website',
+		'canonical'   => home_url( $wp->request ? "/{$wp->request}" : '/' ),
+		'content'     => '',
+	];
 
 	if ( empty( $wp->request ) ) {
-		echo 'LocalMeet is an <a href="https://github.com/austinginder/LocalMeet" target="_new">open source</a> meetup tool powered by WordPress.';
-		echo '<a href="/start-group">Start Group</a>';
-		echo '<a href="/find-group">Find Group</a>';
-		return;
+		$data['content'] = '<p>LocalMeet is an <a href="https://github.com/austinginder/LocalMeet" target="_new">open source</a> meetup tool powered by WordPress.</p>'
+			. '<nav><a href="/start-group">Start Group</a> | <a href="/find-group">Find Group</a></nav>';
+		$cache = $data;
+		return $cache;
 	}
 
 	if ( $wp->request == "start-group" ) {
-		echo "<h1>Start a new group</h1>";
-		return;
+		$data['title']       = "Start a New Group | {$site_name}";
+		$data['description'] = "Create your own local meetup group on {$site_name}.";
+		$data['content']     = '<h1>Start a new group</h1>';
+		$cache = $data;
+		return $cache;
 	}
 
 	if ( $wp->request == "find-group" ) {
-		echo "<h1>Find a group</h1>";
+		$data['title']       = "Find a Group | {$site_name}";
+		$data['description'] = "Browse local meetup groups on {$site_name}.";
+		$content = '<h1>Find a group</h1>';
 		$groups = ( new LocalMeet\Groups )->all();
 		foreach ( $groups as $group ) {
-			echo "<a href=\"/group/$group->slug\">$group->name</a>\n";
+			$content .= '<a href="' . esc_url( "/group/$group->slug" ) . '">' . esc_html( $group->name ) . '</a> ';
 		}
-		return;
+		$data['content'] = $content;
+		$cache = $data;
+		return $cache;
 	}
 
-	if ( strpos( $wp->request, "group/" ) !== false && substr_count ( $wp->request , "/" ) == 2 ) {
-		$ids = explode( "/", $wp->request );
-		$group           = $ids[1];
+	// Event page: group/slug/event-slug
+	if ( strpos( $wp->request, "group/" ) !== false && substr_count( $wp->request, "/" ) == 2 ) {
+		$ids             = explode( "/", $wp->request );
+		$group_slug      = $ids[1];
+		$event_slug      = $ids[2];
 		$organization_id = 0;
-		$group  = ( new LocalMeet\Groups )->where( [ "slug" => $group, "organization_id" => $organization_id ] );
-		if ( $group && isset( $group[0] ) ) { 
-			$group_id = $group[0]->group_id;
+		$group  = ( new LocalMeet\Groups )->where( [ "slug" => $group_slug, "organization_id" => $organization_id ] );
+		if ( ! $group || ! isset( $group[0] ) ) {
+			$data['title']   = "Not Found | {$site_name}";
+			$data['content'] = '<p>Event not found.</p>';
+			$cache = $data;
+			return $cache;
 		}
-		$name   = $ids[2];
-		$lookup = ( new LocalMeet\Events )->where(  [ "slug" => $name, "group_id" => $group_id ] );
+		$group_name = $group[0]->name;
+		$group_id   = $group[0]->group_id;
+		$lookup = ( new LocalMeet\Events )->where( [ "slug" => $event_slug, "group_id" => $group_id ] );
 		if ( count( $lookup ) != 1 ) {
-			return new WP_Error( 'not_found', 'Event not found.', [ 'status' => 404 ] );
+			$data['title']   = "Not Found | {$site_name}";
+			$data['content'] = '<p>Event not found.</p>';
+			$cache = $data;
+			return $cache;
 		}
-		$lookup   = (object) $lookup[0];
-		$time_now = date("Y-m-d H:i:s");
-		if ( $lookup->event_at > $time_now ) {
-			$lookup->status = "upcoming";
+		$event    = (object) $lookup[0];
+		$event_at = ( new DateTime( $event->event_at ) )->format( 'l, F j, Y \a\t g:i A' );
+		$desc_html = ( new Parsedown )->text( $event->description );
+		$desc_text = wp_strip_all_tags( $desc_html );
+		$desc_short = mb_substr( $desc_text, 0, 160 );
+
+		$location_data = json_decode( $event->location );
+		$location_str  = '';
+		if ( $location_data && is_object( $location_data ) ) {
+			$parts = array_filter( [ $location_data->name ?? '', $location_data->address ?? '' ] );
+			$location_str = implode( ', ', $parts );
 		}
-		if ( $lookup->event_at < $time_now ) {
-			$lookup->status = "past";
+
+		$data['title']       = esc_html( $event->name ) . " - " . esc_html( $group_name ) . " | {$site_name}";
+		$data['description'] = $desc_short ?: "{$event->name} on {$event_at}";
+		$data['og_type']     = 'article';
+
+		if ( ! empty( $event->image_id ) ) {
+			$data['og_image'] = wp_get_attachment_image_url( $event->image_id, 'large' ) ?: '';
 		}
-		$lookup->description_raw = $lookup->description;
-		$lookup->description     = ( new Parsedown )->text( $lookup->description );
-		$lookup->attendees       = ( new LocalMeet\Attendees )->where( [ "event_id" => $lookup->event_id, "going" => 1 ] );
-		$lookup->attendees_not   = ( new LocalMeet\Attendees )->where( [ "event_id" => $lookup->event_id, "going" => 0 ] );
-		foreach( $lookup->attendees as $key => $attendee ) {
-			$user                      = get_userdata( $attendee->user_id );
-			$attendee->name            = "{$user->first_name} {$user->last_name}";
-			$attendee->avatar          = get_avatar_url( $user->user_email, [ "size" => "80" ] );
-			$lookup->attendees[ $key ] = $attendee;
+
+		$content  = '<article>';
+		$content .= '<h1>' . esc_html( $event->name ) . '</h1>';
+		$content .= '<p><strong>When:</strong> ' . esc_html( $event_at ) . '</p>';
+		if ( $location_str ) {
+			$content .= '<p><strong>Where:</strong> ' . esc_html( $location_str ) . '</p>';
 		}
-		foreach( $lookup->attendees_not as $key => $attendee ) {
-			$user                      = get_userdata( $attendee->user_id );
-			$attendee->name            = "{$user->first_name} {$user->last_name}";
-			$attendee->avatar          = get_avatar_url( $user->user_email, [ "size" => "80" ] );
-			$lookup->attendees_not[ $key ] = $attendee;
-		}
-		$event_at = ( new DateTime( $lookup->event_at ) )->format('D F j, Y, H:i a');
-		echo "<h1>$lookup->name</h1><h2>$event_at</h2><div>$lookup->description</div>";
-		return;
+		$content .= '<p><strong>Group:</strong> <a href="' . esc_url( "/group/{$group_slug}" ) . '">' . esc_html( $group_name ) . '</a></p>';
+		$content .= '<div>' . wp_kses_post( $desc_html ) . '</div>';
+		$content .= '</article>';
+
+		$data['content'] = $content;
+		$cache = $data;
+		return $cache;
 	}
 
+	// Group page: group/slug
 	if ( strpos( $wp->request, "group/" ) !== false ) {
-		$url_splits   = explode( "/", $wp->request);
-		$name         = $url_splits[1];
-		$request      = [ "slug" => $name ];
-		$lookup       = ( new LocalMeet\Groups )->where( $request );
+		$url_splits = explode( "/", $wp->request );
+		$name       = $url_splits[1];
+		$lookup     = ( new LocalMeet\Groups )->where( [ "slug" => $name ] );
 		if ( count( $lookup ) != 1 ) {
-			echo 'Group not found.';
+			$data['title']   = "Not Found | {$site_name}";
+			$data['content'] = '<p>Group not found.</p>';
+			$cache = $data;
+			return $cache;
 		}
-		$lookup = $lookup[0];
-		$lookup->upcoming = ( new LocalMeet\Events )->upcoming( [ "group_id" => $lookup->group_id ] );
-		$lookup->past = ( new LocalMeet\Events )->past( [ "group_id" => $lookup->group_id ] );
-		if ( empty( $lookup->upcoming ) ) {
-			$lookup->upcoming = [];
+		$group   = $lookup[0];
+		$desc_text = wp_strip_all_tags( $group->description );
+		$desc_short = mb_substr( $desc_text, 0, 160 );
+
+		$data['title']       = esc_html( $group->name ) . " | {$site_name}";
+		$data['description'] = $desc_short ?: "Join {$group->name} on {$site_name}.";
+
+		$upcoming = ( new LocalMeet\Events )->upcoming( [ "group_id" => $group->group_id ] ) ?: [];
+		$past     = ( new LocalMeet\Events )->past( [ "group_id" => $group->group_id ] ) ?: [];
+
+		$content  = '<article>';
+		$content .= '<h1>' . esc_html( $group->name ) . '</h1>';
+		$content .= '<p>' . wp_kses_post( ( new Parsedown )->text( $group->description ) ) . '</p>';
+		if ( $upcoming ) {
+			$content .= '<h2>Upcoming Events</h2><ul>';
+			foreach ( $upcoming as $event ) {
+				$content .= '<li><a href="' . esc_url( "/group/{$group->slug}/{$event->slug}" ) . '">' . esc_html( $event->name ) . '</a></li>';
+			}
+			$content .= '</ul>';
 		}
-		if ( empty( $lookup->past ) ) {
-			$lookup->past = [];
+		if ( $past ) {
+			$content .= '<h2>Past Events</h2><ul>';
+			foreach ( $past as $event ) {
+				$content .= '<li><a href="' . esc_url( "/group/{$group->slug}/{$event->slug}" ) . '">' . esc_html( $event->name ) . '</a></li>';
+			}
+			$content .= '</ul>';
 		}
-		echo "<h1>$lookup->name</h1><h2>$lookup->description</h2>";
-		echo "<h1>Find a group.</h1>\n";
-		echo "<h2>Upcoming Events</h2>\n";
-		foreach( $lookup->upcoming as $event ) {
-			echo "<a href=\"/group/$lookup->slug/$event->slug\">$event->slug</a>\n";
-		}
-		echo "<h2>Past Events</h2>\n";
-		foreach( $lookup->past as $event ) {
-			echo "<a href=\"/group/$lookup->slug/$event->slug\">$event->slug</a>\n";
-		}
-		return;
+		$content .= '</article>';
+
+		$data['content'] = $content;
+		$cache = $data;
+		return $cache;
 	}
 
-	echo "Page not found.";
-	return;
+	$data['title']   = "Page Not Found | {$site_name}";
+	$data['content'] = '<p>Page not found.</p>';
+	$cache = $data;
+	return $cache;
+}
 
+function localmeet_meta_description() {
+	$seo = localmeet_seo_data();
+	echo esc_attr( $seo['description'] );
+}
+
+function localmeet_meta_tags() {
+	$seo       = localmeet_seo_data();
+	$site_name = get_bloginfo( 'name' );
+	$tags      = '';
+
+	// Open Graph
+	$tags .= '<meta property="og:type" content="' . esc_attr( $seo['og_type'] ) . '" />' . "\n";
+	$tags .= '<meta property="og:title" content="' . esc_attr( $seo['title'] ) . '" />' . "\n";
+	$tags .= '<meta property="og:description" content="' . esc_attr( $seo['description'] ) . '" />' . "\n";
+	$tags .= '<meta property="og:url" content="' . esc_url( $seo['canonical'] ) . '" />' . "\n";
+	$tags .= '<meta property="og:site_name" content="' . esc_attr( $site_name ) . '" />' . "\n";
+	if ( ! empty( $seo['og_image'] ) ) {
+		$tags .= '<meta property="og:image" content="' . esc_url( $seo['og_image'] ) . '" />' . "\n";
+	}
+
+	// Twitter Card
+	$tags .= '<meta name="twitter:card" content="' . ( ! empty( $seo['og_image'] ) ? 'summary_large_image' : 'summary' ) . '" />' . "\n";
+	$tags .= '<meta name="twitter:title" content="' . esc_attr( $seo['title'] ) . '" />' . "\n";
+	$tags .= '<meta name="twitter:description" content="' . esc_attr( $seo['description'] ) . '" />' . "\n";
+	if ( ! empty( $seo['og_image'] ) ) {
+		$tags .= '<meta name="twitter:image" content="' . esc_url( $seo['og_image'] ) . '" />' . "\n";
+	}
+
+	// Canonical
+	$tags .= '<link rel="canonical" href="' . esc_url( $seo['canonical'] ) . '" />' . "\n";
+
+	echo $tags;
+}
+
+function localmeet_title() {
+	$seo = localmeet_seo_data();
+	echo esc_html( $seo['title'] );
+}
+
+function localmeet_content() {
+	$seo = localmeet_seo_data();
+	echo $seo['content'];
 }

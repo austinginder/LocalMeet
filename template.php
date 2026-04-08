@@ -7,106 +7,129 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
 ?><!DOCTYPE html>
 <html>
 <head>
-	<link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
-	<link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
-	<link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
-	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+	<script src="https://cdn.tailwindcss.com"></script>
+	<script>
+	tailwind.config = {
+		darkMode: 'class',
+		theme: {
+			fontFamily: {
+				sans: ['Inter', 'system-ui', 'sans-serif'],
+			},
+			fontSize: {
+				'xs': ['0.8125rem', { lineHeight: '1.25rem' }],
+				'sm': ['1rem', { lineHeight: '1.5rem' }],
+			},
+			extend: {
+				colors: {
+					primary: {
+						50: '#eef2ff',
+						100: '#e0e7ff',
+						200: '#c7d2fe',
+						300: '#a5b4fc',
+						400: '#818cf8',
+						500: '#6366f1',
+						600: '#2849c5',
+						700: '#2240ab',
+						800: '#1e3691',
+						900: '#1a2f77',
+						950: '#111d4d',
+					}
+				}
+			}
+		}
+	}
+	</script>
+	<script>
+	if (localStorage.getItem('theme') === 'light') {
+		document.documentElement.classList.remove('dark')
+	} else {
+		document.documentElement.classList.add('dark')
+	}
+	</script>
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
 	<meta name="description" content="<?php echo localmeet_meta_description(); ?>" />
+	<?php localmeet_meta_tags(); ?>
 	<?php echo localmeet_header_content_extracted(); ?>
-	<title>LocalMeet</title>
+	<title><?php localmeet_title(); ?></title>
 	<style>
-		[v-cloak] > * {
-			display:none;
-		}
-		.v-main, .v-navigation-drawer {
-			transition: none;
-		}
-		.theme--light.v-data-table.minimal>.v-data-table__wrapper>table>tbody>tr:not(:last-child)>td:last-child, 
-		.theme--light.v-data-table.minimal>.v-data-table__wrapper>table>tbody>tr:not(:last-child)>td:not(.v-data-table__mobile-row), 
-		.theme--light.v-data-table.minimal>.v-data-table__wrapper>table>tbody>tr:not(:last-child)>th:last-child, 
-		.theme--light.v-data-table.minimal>.v-data-table__wrapper>table>tbody>tr:not(:last-child)>th:not(.v-data-table__mobile-row),
-		.theme--light.v-data-table.minimal>.v-data-table__wrapper>table>thead>tr:last-child>th {
-			border: 0px;
-		}
-		.theme--light.v-data-table.minimal>.v-data-table__wrapper>table>tbody>tr:hover:not(.v-data-table__expanded__content):not(.v-data-table__empty-wrapper) {
-			background: none;
-		}
-		.event p, .summary p {
-			margin: 16px 0px;
-		}
+		[x-cloak] { display: none !important; }
+		.dark { color-scheme: dark; }
+		.prose-content p { margin: 1em 0; }
+		.prose-content ul, .prose-content ol { margin: 0.75em 0; padding-left: 1.5em; }
+		.prose-content ul { list-style-type: disc; }
+		.prose-content ol { list-style-type: decimal; }
+		.prose-content li { margin: 0.25em 0; }
+		.prose-content h1, .prose-content h2, .prose-content h3, .prose-content h4 { font-weight: 600; margin: 1em 0 0.5em; }
+		.prose-content h1 { font-size: 1.5em; }
+		.prose-content h2 { font-size: 1.25em; }
+		.prose-content h3 { font-size: 1.125em; }
+		.prose-content a { color: #2849c5; text-decoration: underline; }
+		.dark .prose-content a { color: #818cf8; }
+		.prose-content blockquote { border-left: 3px solid #d1d5db; padding-left: 1em; margin: 1em 0; color: #6b7280; }
+		.dark .prose-content blockquote { border-color: #4b5563; color: #9ca3af; }
+		.prose-content code { background: #f3f4f6; padding: 0.125em 0.375em; border-radius: 0.25em; font-size: 0.875em; }
+		.dark .prose-content code { background: #374151; }
+		.prose-content pre code { background: none; padding: 0; }
+		.prose-content pre { background: #f3f4f6; padding: 1em; border-radius: 0.5em; overflow-x: auto; margin: 1em 0; }
+		.dark .prose-content pre { background: #1f2937; }
 	</style>
 </head>
-<body>
-<div id="app" server-rendered="true" v-cloak>
-	<div><?php localmeet_content(); ?></div>
+<body class="bg-gray-50 dark:bg-gray-900 font-sans text-gray-900 dark:text-gray-100 antialiased">
+<div id="ssr-content" class="max-w-xl mx-auto px-4 py-6"><?php localmeet_content(); ?></div>
+<noscript><style>#ssr-content{display:block!important}</style></noscript>
+<div id="app-loading" class="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+	<div class="px-6 h-14 flex items-center">
+		<div class="h-6 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+	</div>
 </div>
-<div id="app-template" v-cloak>
+<div x-data="localmeet()" x-cloak>
 <?php echo file_get_contents( plugin_dir_path(__FILE__) . "template.html" ) ?>
 </div>
-<?php if ( substr( $_SERVER['SERVER_NAME'], -9) == 'localhost' ) { ?>
-<script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
-<?php } else { ?>
-<script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.js"></script>
-<?php } ?>
-<script src="https://cdn.jsdelivr.net/npm/axios@0.19.0/dist/axios.min.js"></script>
+
 <script>
 <?php if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) { ?>
-wc_countries = <?php $countries = ( new WC_Countries )->get_allowed_countries(); foreach ( $countries as $key => $county ) { $results[] = [ "text" => $county, "value" => $key ]; }; echo json_encode( $results ); ?>;
-wc_states = <?php echo json_encode( array_merge( WC()->countries->get_allowed_country_states(), WC()->countries->get_shipping_country_states() ) ); ?>;
-wc_address_i18n_params = <?php echo json_encode( WC()->countries->get_country_locale() ); ?>;
+var wc_countries = <?php $countries = ( new WC_Countries )->get_allowed_countries(); $results = []; foreach ( $countries as $key => $county ) { $results[] = [ "text" => $county, "value" => $key ]; }; echo json_encode( $results ); ?>;
+var wc_states = <?php echo json_encode( array_merge( WC()->countries->get_allowed_country_states(), WC()->countries->get_shipping_country_states() ) ); ?>;
 <?php } else { ?>
-wc_countries = []
-wc_states = []
+var wc_countries = [];
+var wc_states = [];
 <?php } ?>
 
-var prerendered = document.querySelector('#app')
-var rendered = document.querySelector('#app-template')
-prerendered.replaceWith( rendered )
-rendered.id = "app"
-
-new Vue({
-	el: '#app',
-	vuetify: new Vuetify({
-		theme: {
-			themes: {
-				light: {
-					primary: '#2849c5',
-					secondary: '#424242',
-					accent: '#82B1FF',
-					error: '#FF5252',
-					info: '#2196F3',
-					success: '#4CAF50',
-					warning: '#FFC107'
-				},
-			},
-		},
-	}),
-	data: {
+function localmeet() {
+	return {
 		countries: wc_countries,
 		plugins_url: "<?php echo plugins_url(); ?>",
-		drawer: null,
+		drawer: false,
 		logged_in: false,
 		wp_nonce: "",
-		attend_menu: "",
+		attend_menu: false,
 		attend_selection: "",
 		event: {},
 		event_loading: true,
-		new_event: { show: false, time: "", date: "", time_picker: false, date_selector: false, name: "", location: "", group_id: "", description: "" },
-		edit_event: { show: false, time: "", date: "", time_picker: false, date_selector: false, errors: [], event: {} },
+		new_event: { show: false, time: "", end_time: "", date: "", name: "", location: "", location_name: "", location_address: "", group_id: "", description: "", capacity: "", recurrence_rule: "", image_id: null, image_url: null, image_picker: false, image_uploading: false, errors: [] },
+		edit_event: { show: false, time: "", end_time: "", date: "", errors: [], image_picker: false, image_uploading: false, event: {} },
+		my_images: [],
+		notice: { show: false, subject: '', message: '', sending: false },
+		new_location: { show: false, name: "", address: "", notes: "", errors: [] },
+		edit_location: { show: false, errors: [], location: {} },
 		attend_event: { show: false, event_id: "", first_name: "", last_name: "", email: "", errors: [] },
 		new_comment: "",
-		edit_group: { show: false, errors: [], group: {} },
+		edit_group: { show: false, errors: [], test_sending: false, group: {} },
 		group: {},
 		group_join_request: { show: false, errors: [], first_name: "", last_name: "", email: "" },
 		group_nav: 1,
 		groups: [],
-		group_new: { errors: [], name: "", email: "" },
+		groups_total: 0,
+		groups_page: 1,
+		groups_loading: false,
+		group_new: { errors: [], name: "", email: "", description: "" },
 		group_apply: { address: { country: "US" }, type: "new" },
 		group_search: "",
+		event_search: "",
+		past_events_page: 1,
 		member_leave: {},
-		login: { user_login: "", user_password: "", errors: "", loading: false, lost_password: false, message: "" },
+		login: { show: false, user_login: "", user_password: "", errors: "", loading: false, lost_password: false, message: "" },
 		organization: {},
 		page: "",
 		snackbar: { show: false, message: "" },
@@ -115,437 +138,384 @@ new Vue({
 		user: <?php echo json_encode( ( new LocalMeet\App )->current_user() ); ?>,
 		route: "",
 		route_path: "",
+		invite: { email: '', group_allowance: 1, errors: [] },
+		invites: [],
 		routes: {
-			'' : '',
+			'': '',
 			'/': '',
 			'/profile': 'profile',
 			'/sign-out': 'sign-out',
 			'/start-group': 'start-group',
 			'/find-group': 'find-group',
+			'/admin/invites': 'admin-invites',
 			'/account': 'account',
 		},
-	},
-	mounted() {
-		this.fetchGroups()
-		if ( typeof wpApiSettings == "undefined" ) {
-			//window.history.pushState( {}, 'login', "/account/login" )
-			this.logged_in = false
-		} else {
-			this.wp_nonce = wpApiSettings.nonce
-			this.logged_in = true
-		}
-		window.addEventListener('popstate', () => {
-			this.updateRoute( window.location.pathname )
-		})
-		this.updateRoute( window.location.pathname )
-	},
-	watch: {
-		route() {
+		user_menu: false,
+		editing_comment_id: null,
+		darkMode: document.documentElement.classList.contains('dark'),
+
+		get hasSidebar() {
+			return this.route !== '' && this.route !== 'start-group' && this.route !== 'find-group' && this.route !== 'missing' && this.route !== 'profile' && this.route !== 'admin-invites'
+		},
+		get filteredGroups() {
+			return [...this.groups].sort((a, b) => {
+				const aScore = a.is_organizer ? 2 : (a.is_pinned ? 1 : 0)
+				const bScore = b.is_organizer ? 2 : (b.is_pinned ? 1 : 0)
+				return bScore - aScore
+			})
+		},
+
+		init() {
+			const loading = document.getElementById('app-loading')
+			if (loading) loading.remove()
+			const ssr = document.getElementById('ssr-content')
+			if (ssr) ssr.remove()
+
+			this.fetchGroups()
+			this._searchTimeout = null
+			this.$watch('group_search', (val) => {
+				clearTimeout(this._searchTimeout)
+				this._searchTimeout = setTimeout(() => this.searchGroups(), 300)
+			})
+			this._eventSearchTimeout = null
+			this.$watch('event_search', () => {
+				clearTimeout(this._eventSearchTimeout)
+				this._eventSearchTimeout = setTimeout(() => this.searchEvents(), 300)
+			})
+			if (typeof wpApiSettings === 'undefined') {
+				this.logged_in = false
+			} else {
+				this.wp_nonce = wpApiSettings.nonce
+				this.logged_in = true
+			}
+			window.addEventListener('popstate', () => this.updateRoute(window.location.pathname))
+
+			this.$watch('route', () => this.triggerRoute())
+			this.$watch('route_path', () => this.triggerPath())
+			this.$watch('snackbar.show', (val) => {
+				if (val) setTimeout(() => this.snackbar.show = false, 3000)
+			})
+
+			this.updateRoute(window.location.pathname)
 			this.triggerRoute()
 		},
-		route_path() {
-			this.triggerPath()
-		},
-	},
-	filters: {
-		pretty_timestamp: function (date) {
-			// takes in '2018-06-18 19:44:47' then returns "Monday, Jun 18, 2018, 7:44 PM"
-			formatted_date = new Date(date).toLocaleTimeString( "en-us", { weekday: "short", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" } )
-			return formatted_date;
-		},
-		pretty_day_timestamp: function (date) {
-			// takes in '2018-06-18 19:44:47' then returns "June 18, 2018"
-			formatted_date = new Date(date).toLocaleDateString( "en-us", { year: "numeric", month: "long", day: "numeric" } )
-			return formatted_date
-		},
-	},
-	methods: {
-		groupLink( page ) {
-			if ( this.organization.slug ) {
-				organization = this.organization.slug
-			} else {
-				organization = "group"
-			}
 
-			return `/${organization}/${this.group.slug}/${page}`
+		refreshUser() {
+			this.apiFetch('/wp-json/localmeet/v1/login/', {
+				method: 'POST',
+				headers: this.apiHeaders(),
+				body: JSON.stringify({ command: 'currentUser' })
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (data.nonce) this.wp_nonce = data.nonce
+				if (data.can_create_group !== undefined) {
+					this.user.can_create_group = data.can_create_group
+				}
+			})
+			.catch(() => {})
 		},
-		groupHomeLink( group ) {
-			if ( group.organization_id == "0" ) {
-				organization = "group"
+
+		toggleDarkMode() {
+			this.darkMode = !this.darkMode
+			document.documentElement.classList.toggle('dark', this.darkMode)
+			localStorage.setItem('theme', this.darkMode ? 'dark' : 'light')
+		},
+
+		formatShortDate(dateStr) {
+			if (!dateStr) return ''
+			const d = new Date(dateStr.replace(' ', 'T'))
+			return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+		},
+
+		mapAddress(loc) {
+			if (!loc) return ''
+			try {
+				const parsed = JSON.parse(loc)
+				if (typeof parsed === 'object' && parsed !== null) {
+					if (parsed.address) return parsed.address
+					return parsed.name || ''
+				}
+				return loc
+			} catch (e) {
+				return loc
+			}
+		},
+		formatLocation(loc) {
+			if (!loc) return ''
+			try {
+				const parsed = JSON.parse(loc)
+				if (typeof parsed === 'object' && parsed !== null) {
+					const parts = [parsed.name, parsed.address].filter(Boolean)
+					return parts.join(' - ')
+				}
+				return loc
+			} catch (e) {
+				return loc
+			}
+		},
+		prettyTimestamp(date) {
+			return new Date(date).toLocaleTimeString("en-us", { weekday: "short", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+		},
+		prettyDayTimestamp(date) {
+			return new Date(date).toLocaleDateString("en-us", { year: "numeric", month: "long", day: "numeric" })
+		},
+		apiHeaders() {
+			const h = { 'Content-Type': 'application/json' }
+			if (this.wp_nonce) h['X-WP-Nonce'] = this.wp_nonce
+			return h
+		},
+		async refreshNonce() {
+			const r = await fetch('/wp-json/localmeet/v1/login/', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ command: 'currentUser' })
+			})
+			const data = await r.json()
+			if (data.nonce) {
+				this.wp_nonce = data.nonce
+			}
+		},
+		async apiFetch(url, options = {}) {
+			if (!options.headers) options.headers = this.apiHeaders()
+			let r = await fetch(url, options)
+			if (r.status === 403 && this.logged_in) {
+				await this.refreshNonce()
+				options.headers = this.apiHeaders()
+				r = await fetch(url, options)
+			}
+			return r
+		},
+
+		groupLink(page) {
+			const org = this.organization.slug || 'group'
+			return `/${org}/${this.group.slug}/${page}`
+		},
+		groupHomeLink(group) {
+			let organization = 'group'
+			if (group.organization_id !== '0' && this.organization.slug) {
+				organization = this.organization.slug
 			}
 			return `/${organization}/${group.slug}`
 		},
-		updateRoute( href ) {
-			page_depth = href.match(/\//g).length
-			// Remove trailing slash
-			if ( href.slice(-1) == "/" ) {
-				href = href.slice(0, -1)
+		updateRoute(href) {
+			const page_depth = href.match(/\//g).length
+			if (href.slice(-1) === '/') href = href.slice(0, -1)
+			// Check full path against known routes first
+			if (typeof this.routes[href] !== 'undefined') {
+				this.route_path = ''
+				this.route = this.routes[href]
+				return
 			}
-			// Catch all nested routes to their parent route.
-			if ( href != "" && href.match(/\//g).length > 1 ) {
-				this.route_path = href.split('/').slice( 2 ).join( "/" )
-				href = href.split('/').slice( 0, 2 ).join( "/" )
-			} else {
-				this.route_path = ""
+			let new_route_path = ''
+			let base_href = href
+			if (href !== '' && href.match(/\//g).length > 1) {
+				new_route_path = href.split('/').slice(2).join('/')
+				base_href = href.split('/').slice(0, 2).join('/')
 			}
-			this.route = this.routes[ href ]
-			if ( typeof this.route == 'undefined' ) {
-				group = window.location.pathname.split('/').slice( 2, 3 ).join( "/" )
-				event = window.location.pathname.split('/').slice( 3, 4 ).join( "/" )
-				if ( page_depth == 1 ) {
-					this.route = "organization"
-				}
-				if ( page_depth == 2 || event == "leave" || event == "members" || event == "events" ) {
-					this.route = "group"
-				}
-				if ( page_depth == 3 && event != "leave" ) {
+			let new_route = this.routes[base_href]
+			if (typeof new_route === 'undefined') {
+				const event = window.location.pathname.split('/').slice(3, 4).join('/')
+				if (page_depth === 1) new_route = 'organization'
+				if (page_depth === 2 || event === 'leave' || event === 'members' || event === 'events' || event === 'locations') new_route = 'group'
+				if (page_depth === 3 && event !== 'leave' && event !== 'members' && event !== 'events' && event !== 'locations') {
 					this.event_loading = true
-					this.route = "event"
+					new_route = 'event'
 				}
 			}
+			this.route_path = new_route_path
+			this.route = new_route
 		},
 		triggerRoute() {
-			page_depth = window.location.pathname.match(/\//g).length
-			organization = window.location.pathname.split('/').slice( 1, 2 ).join( "/" )
-			group = window.location.pathname.split('/').slice( 2, 3 ).join( "/" )
-			event = window.location.pathname.split('/').slice( 3, 4 ).join( "/" )
-			if ( page_depth == 3 ) {
-				this.page = window.location.pathname.split('/').slice( 0, 2 ).join( "/" )
+			const page_depth = window.location.pathname.match(/\//g).length
+			const organization = window.location.pathname.split('/').slice(1, 2).join('/')
+			const group = window.location.pathname.split('/').slice(2, 3).join('/')
+			const event = window.location.pathname.split('/').slice(3, 4).join('/')
+
+			if (page_depth === 3) {
+				this.page = window.location.pathname.split('/').slice(0, 2).join('/')
 			}
-			if ( this.route == "" ) {
+			if (this.route === '') {
 				this.group = {}
 				this.organization = {}
 				this.fetchGroups()
 			}
-			if ( this.route == "profile" ) {
+			if (this.route === 'profile') {
 				this.group = {}
 				this.organization = {}
 			}
-			if ( this.route == "sign-out" ) {
-				this.signOut()
-			}
-			if ( this.route == "start-group" ) {
-				this.group = {}
-			}
-			if ( this.route == "event" ) {
+			if (this.route === 'sign-out') this.signOut()
+			if (this.route === 'start-group') this.group = {}
+			if (this.route === 'event') {
 				this.fetchEvent()
-				if ( ! this.group.slug ) {
-					this.fetchGroup()
-				}
-				urlParams = new URLSearchParams(window.location.search)
-				rsvp = urlParams.get('rsvp');
-				if ( rsvp ) {
-					this.snackbar.message = "You are confirmed."
+				if (!this.group.slug) this.fetchGroup()
+				const urlParams = new URLSearchParams(window.location.search)
+				if (urlParams.get('rsvp')) {
+					this.snackbar.message = 'You are confirmed.'
 					this.snackbar.show = true
 				}
 			}
-			if ( this.route == "find-group" ) {
+			if (this.route === 'find-group') {
 				this.fetchGroups()
 				this.group = {}
 				this.organization = {}
 			}
-			if ( this.route == "group" ) {
-				if ( organization == "group" ) {
-					this.organization = {}
-				}
-				if ( group == "start-group" ) {
+			if (this.route === 'group') {
+				if (organization === 'group') this.organization = {}
+				if (group === 'start-group') {
 					this.populateStates()
 					this.group = {}
 				}
-				if ( group != "start-group" ) {
-					this.fetchGroup()
-				}
-				if ( organization != "group" ) {
-					this.fetchOrganization()
-				}
-				urlParams = new URLSearchParams(window.location.search)
-				rsvp = urlParams.get('joined');
-				if ( rsvp ) {
-					this.snackbar.message = "Welcome to the group!"
+				if (group !== 'start-group') this.fetchGroup()
+				if (organization !== 'group') this.fetchOrganization()
+				const urlParams = new URLSearchParams(window.location.search)
+				if (urlParams.get('joined')) {
+					this.snackbar.message = 'Welcome to the group!'
 					this.snackbar.show = true
 				}
 			}
-			if ( this.route == "organization" ) {
-				this.fetchOrganization()
-			}
+			if (this.route === 'organization') this.fetchOrganization()
+			if (this.route === 'admin-invites') this.fetchInvites()
 		},
 		triggerPath() {
-			if ( this.route_path == "start-group" ) {
-				this.group = {}
-			}
+			if (this.route_path === 'start-group') this.group = {}
 		},
-		goToPath ( href ) {
-			this.updateRoute( href )
-			window.history.pushState( {}, this.routes[href], href )
+		goToPath(href) {
+			const prevRoute = this.route
+			window.history.pushState({}, '', href)
+			this.updateRoute(href)
+			// If route didn't change (e.g. group->group or event->event),
+			// the $watch won't fire, so trigger manually
+			if (this.route === prevRoute) this.triggerRoute()
 		},
+
 		createGroup() {
 			this.group_new.errors = []
-			headers = {}
-			if ( this.wp_nonce ) {
-				headers['X-WP-Nonce'] = this.wp_nonce
-			}
-			axios.post( '/wp-json/localmeet/v1/groups/create', {
-				'request': this.group_new,
-			},{
-				headers: headers
+			this.apiFetch('/wp-json/localmeet/v1/groups/create', {
+				method: 'POST',
+				headers: this.apiHeaders(),
+				body: JSON.stringify({ request: this.group_new })
 			})
-			.then( response => {
-				if ( typeof response.data.errors === 'undefined' || response.data.errors.length == 0 ) {
-					this.group_new = { errors: [], name: "", email: "" }
-					this.snackbar.message = "Your group is almost ready. Check your email to complete verification."
-					this.snackbar.show = true
-					this.route = ""
-					window.history.pushState( {}, 'LocalMeet', "/" )
+			.then(r => r.json())
+			.then(data => {
+				if (typeof data.errors === 'undefined' || data.errors.length === 0) {
+					this.group_new = { errors: [], name: '', email: '', description: '' }
+					if (data.redirect) {
+						this.goToPath(data.redirect)
+					} else {
+						this.route = ''
+						window.history.pushState({}, 'LocalMeet', '/')
+					}
+					this.refreshUser()
 					return
 				}
-				this.group_new.errors = response.data.errors
+				this.group_new.errors = data.errors
 			})
-			.catch(error => {
-				console.log(error);
-			});
-		},
-		fetchEvent() {
-			organization = window.location.pathname.split('/').slice( 1, 2 ).join( "/" )
-			group = window.location.pathname.split('/').slice( 2, 3 ).join( "/" )
-			event = window.location.pathname.split('/').slice( 3, 4 ).join( "/" )
-			headers = {}
-			if ( this.wp_nonce ) {
-				headers['X-WP-Nonce'] = this.wp_nonce
-			}
-			axios.get( `/wp-json/localmeet/v1/event/${event}?organization=${organization}&group=${group}`, {
-				headers: headers
-			})
-			.then(response => {
-				this.event = response.data
-				this.event_loading = false
-			}).catch(err => {
-				this.route = "missing"
-			})
+			.catch(err => console.log(err))
 		},
 		fetchGroups() {
-			headers = {}
-			if ( this.wp_nonce ) {
-				headers['X-WP-Nonce'] = this.wp_nonce
-			}
-			axios.get( `/wp-json/localmeet/v1/groups`, {
-				headers: headers
+			this.groups_page = 1
+			this.groups_loading = true
+			this.apiFetch(`/wp-json/localmeet/v1/groups?per_page=20&page=1`, { headers: this.apiHeaders() })
+			.then(r => r.json())
+			.then(data => {
+				this.groups = data.groups
+				this.groups_total = data.total
+				this.groups_loading = false
 			})
-			.then(response => {
-				this.groups = response.data
-			});
 		},
-		fetchGroup() {
-			organization = window.location.pathname.split('/').slice( 1 )[0]
-			group = window.location.pathname.split('/').slice( 2, 3 ).join( "/" )
-			if ( organization != "group" ) {
-				group = `${group}?organization=${organization}`
-			}
-			headers = {}
-			if ( this.wp_nonce ) {
-				headers['X-WP-Nonce'] = this.wp_nonce
-			}
-			axios.get( `/wp-json/localmeet/v1/group/${group}`, {
-				headers: headers
+		loadMoreGroups() {
+			this.groups_page++
+			this.groups_loading = true
+			this.apiFetch(`/wp-json/localmeet/v1/groups?per_page=20&page=${this.groups_page}`, { headers: this.apiHeaders() })
+			.then(r => r.json())
+			.then(data => {
+				this.groups = this.groups.concat(data.groups)
+				this.groups_loading = false
 			})
-			.then(response => {
-				group = response.data
-				action = window.location.pathname.split('/').slice( 3, 4 ).join( "/" )
-				if ( action == "leave" ) {
-					group.show = "leave"
+		},
+		searchGroups() {
+			if (!this.group_search || this.group_search.length < 2) {
+				this.fetchGroups()
+				return
+			}
+			this.groups_loading = true
+			this.apiFetch(`/wp-json/localmeet/v1/groups/search?q=${encodeURIComponent(this.group_search)}`, { headers: this.apiHeaders() })
+			.then(r => r.json())
+			.then(data => {
+				this.groups = data.groups
+				this.groups_total = data.total
+				this.groups_loading = false
+			})
+		},
+		fetchGroup(events_page = 1) {
+			this.past_events_page = 1
+			this.event_search = ''
+			const org = window.location.pathname.split('/').slice(1)[0]
+			const group = window.location.pathname.split('/').slice(2, 3).join('/')
+			this.apiFetch(`/wp-json/localmeet/v1/group/${group}?organization=${org}&events_per_page=20&events_page=${events_page}`, { headers: this.apiHeaders() })
+			.then(r => r.json())
+			.then(data => {
+				const action = window.location.pathname.split('/').slice(3, 4).join('/')
+				if (action === 'leave') {
+					data.show = 'leave'
 					this.fetchLeave()
+				} else if (action === 'members') {
+					data.show = 'members'
+				} else if (action === 'events') {
+					data.show = 'list'
+				} else if (action === 'locations') {
+					data.show = 'locations'
+				} else if (!data.show) {
+					data.show = 'list'
 				}
-				this.group = group
-			});
+				this.group = data
+			})
+		},
+		get pastTotalPages() {
+			return Math.ceil((this.group.past_total || 0) / 20)
+		},
+		goToPastPage(page) {
+			if (page < 1 || page > this.pastTotalPages) return
+			this.past_events_page = page
+			const org = window.location.pathname.split('/').slice(1)[0]
+			const group_slug = window.location.pathname.split('/').slice(2, 3).join('/')
+			this.apiFetch(`/wp-json/localmeet/v1/group/${group_slug}?organization=${org}&events_per_page=20&events_page=${this.past_events_page}`, { headers: this.apiHeaders() })
+			.then(r => r.json())
+			.then(data => {
+				this.group.past = data.past
+				this.group.past_total = data.past_total
+			})
+		},
+		searchEvents() {
+			if (!this.event_search || this.event_search.length < 2) {
+				this.fetchGroup()
+				return
+			}
+			this.apiFetch(`/wp-json/localmeet/v1/group/${this.group.group_id}/events/search?q=${encodeURIComponent(this.event_search)}`, { headers: this.apiHeaders() })
+			.then(r => r.json())
+			.then(data => {
+				this.group.upcoming = data.upcoming || []
+				this.group.upcoming_total = data.upcoming.length
+				this.group.past = data.past || []
+				this.group.past_total = data.past.length
+			})
 		},
 		fetchLeave() {
-			urlParams = new URLSearchParams(window.location.search)
-			token = urlParams.get('token')
-			axios.get( `/wp-json/localmeet/v1/member/get/${token}` )
-				.then(response => {
-					this.member_leave = response.data
-				}).catch(err => {
-					this.route = "missing"
-				})
-		},
-		fetchOrganization() {
-			organization = window.location.pathname.split('/').slice( 1, 2 ).join( "/" )
-			headers = {}
-			if ( this.wp_nonce ) {
-				headers['X-WP-Nonce'] = this.wp_nonce
-			}
-			axios.get( `/wp-json/localmeet/v1/organization/${organization}`, {
-				headers: headers
-			})
-			.then(response => {
-				this.organization = response.data
-			}).catch(err => {
-				this.route = "missing"
-			})
-		},
-		addEvent() {
-			this.new_event.group_id = this.group.group_id
-			axios.post( '/wp-json/localmeet/v1/events/create', {
-				'new_event': this.new_event
-			},{
-				headers: { 'X-WP-Nonce': this.wp_nonce }
-			}).then( response => {
-				this.fetchGroup()
-				this.new_event = { show: false, time: "", date: "", time_picker: false, date_selector: false, name: "", location: "", group_id: "", description: "" }
-			})
-		},
-		announceEvent() {
-			proceed = confirm( "Are you sure you want to send out an event announcement?" )
-			if ( ! proceed ) {
-				return
-			}
-			event_id = this.event.event_id
-			axios.get( `/wp-json/localmeet/v1/event/${event_id}/announce`, {
-				headers: { 'X-WP-Nonce': this.wp_nonce }
-			}).then( response => {
-				if ( response.data.errors ) {
-					this.edit_event.errors = response.data.errors
-					this.snackbar.message = "Errors " + response.data.errors.split(", ")
-					this.snackbar.show = true
-					return
-				}
-				this.snackbar.message = "Emails sent."
-				this.snackbar.show = true
-			})
-
-		},
-		editEvent() {
-			this.edit_event = { show: false, time: "", date: "", time_picker: false, date_selector: false, errors: [], event: {} }
-			this.edit_event.event = JSON.parse ( JSON.stringify ( this.event ) )
-			this.edit_event.date = this.edit_event.event.event_at.substr(0, 10)
-			this.edit_event.time = this.edit_event.event.event_at.substr(11, 8)
-		},
-		updateEvent() {
-			event_id = this.edit_event.event.event_id
-			this.edit_event.event.event_at = `${this.edit_event.date} ${this.edit_event.time}`
-			axios.post( `/wp-json/localmeet/v1/event/${event_id}/update`, {
-				'edit_event': this.edit_event
-			},{
-				headers: { 'X-WP-Nonce': this.wp_nonce }
-			}).then( response => {
-				if ( response.data.errors ) {
-					this.edit_event.errors = response.data.errors
-					return
-				}
-				this.fetchEvent()
-				this.edit_event = { show: false, time: "", date: "", time_picker: false, date_selector: false, errors: [], event: {} }
-			})
-		},
-		deleteEvent() {
-			proceed = confirm("Delete event?")
-			if ( ! proceed ) {
-				return
-			}
-			this.new_event.group_id = this.group.group_id
-			axios.get( `/wp-json/localmeet/v1/event/${this.event.event_id}/delete`, {
-				headers: { 'X-WP-Nonce': this.wp_nonce }
-			}).then( response => {
-				this.fetchGroup()
-				this.snackbar.message = "Event has been deleted."
-				this.snackbar.show = true
-				this.goToPath( this.groupHomeLink( this.group ) )
-			})
-		},
-		attendEventRequest() {
-			this.attend_event.event_id = this.event.event_id
-			axios.post( `/wp-json/localmeet/v1/attendee/create`, {
-				'request': this.attend_event
-			}).then( response => {
-				if ( response.data.errors ) {
-					this.attend_event.errors = response.data.errors
-					return
-				}
-				this.snackbar.message = "Please check your email to confirm."
-				this.snackbar.show = true
-				this.fetchEvent()
-				this.attend_event = { attend_event: false, event_id: "", first_name: "", last_name: "", email: "", errors: [] }
-			})
-		},
-		attendEvent() {
-			headers = {}
-			if ( this.wp_nonce ) {
-				headers['X-WP-Nonce'] = this.wp_nonce
-			}
-			event_id = this.event.event_id
-			axios.post( `/wp-json/localmeet/v1/event/${event_id}/attend`, {
-				'selection': this.attend_selection
-			},{
-				headers: headers
-			}).then( response => {
-				this.attend_menu = false
-				this.fetchEvent()
-				this.attend_selection = ""
-			})
-		},
-		addComment() {
-			headers = {}
-			if ( this.wp_nonce ) {
-				headers['X-WP-Nonce'] = this.wp_nonce
-			}
-			event_id = this.event.event_id
-			axios.post( `/wp-json/localmeet/v1/event/${event_id}/comment/new`, {
-				'comment': this.new_comment,
-			},{
-				headers: headers
-			}).then( response => {
-				this.new_comment = ""
-				this.fetchEvent()
-			})
-		},
-		updateComment( comment ) {
-			headers = {}
-			if ( this.wp_nonce ) {
-				headers['X-WP-Nonce'] = this.wp_nonce
-			}
-			event_id = this.event.event_id
-			axios.post( `/wp-json/localmeet/v1/event/${event_id}/comment/${comment.comment_id}/update`, {
-				'comment': comment.details_raw
-			},{
-				headers: headers
-			}).then( response => {
-				this.fetchEvent()
-			})
-		},
-		deleteComment( comment_id ) {
-			comment = this.event.comments.filter( c => c.comment_id == comment_id )
-			proceed = confirm( `Delete comment?`)
-			if ( ! proceed ) {
-				return
-			}
-			headers = {}
-			if ( this.wp_nonce ) {
-				headers['X-WP-Nonce'] = this.wp_nonce
-			}
-			
-			if ( comment.length != 1 ) {
-				return
-			}
-			event_id = this.event.event_id
-			axios.post( `/wp-json/localmeet/v1/event/${event_id}/comment/delete`, {
-				'comment_id': comment_id,
-			},{
-				headers: headers
-			}).then( response => {
-				this.fetchEvent()
-			})
+			const urlParams = new URLSearchParams(window.location.search)
+			const token = urlParams.get('token')
+			this.apiFetch(`/wp-json/localmeet/v1/member/get/${token}`)
+			.then(r => r.json())
+			.then(data => this.member_leave = data)
+			.catch(() => this.route = 'missing')
 		},
 		editGroup() {
-			this.edit_group = { show: false, errors: [], group: {} }
-			this.edit_group.group = JSON.parse ( JSON.stringify ( this.group ) )
+			this.edit_group = { show: true, errors: [], test_sending: false, group: JSON.parse(JSON.stringify(this.group)) }
 		},
 		joinGroup() {
-			if( this.user.username ) {
-				headers = {}
-				if ( this.wp_nonce ) {
-					headers['X-WP-Nonce'] = this.wp_nonce
-				}
-				axios.get( `/wp-json/localmeet/v1/group/${this.group.group_id}/join`, {
-					headers: headers
-				}).then( response => {
+			if (this.user.username) {
+				this.apiFetch(`/wp-json/localmeet/v1/group/${this.group.group_id}/join`, { headers: this.apiHeaders() })
+				.then(() => {
 					this.fetchGroup()
 					this.snackbar.message = `Joined group '${this.group.name}'`
 					this.snackbar.show = true
@@ -555,164 +525,633 @@ new Vue({
 			this.group_join_request.show = true
 		},
 		joinGroupRequest() {
-			axios.post( `/wp-json/localmeet/v1/group/${this.group.group_id}/join`, {
-				request: this.group_join_request
-			}).then( response => {
-				if ( response.data.errors.length > 0 ) {
-					this.group_join_request.errors = response.data.errors
+			this.apiFetch(`/wp-json/localmeet/v1/group/${this.group.group_id}/join`, {
+				method: 'POST',
+				headers: this.apiHeaders(),
+				body: JSON.stringify({ request: this.group_join_request })
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (data.errors.length > 0) {
+					this.group_join_request.errors = data.errors
 					return
 				}
-				this.group_join_request = { show: false, errors: [], first_name: "", last_name: "", email: "" }
+				this.group_join_request = { show: false, errors: [], first_name: '', last_name: '', email: '' }
 				this.snackbar.message = `Check your email to complete joining group '${this.group.name}'`
 				this.snackbar.show = true
 			})
 		},
 		leaveGroup() {
-			if( this.user.username ) {
-				headers = {}
-				if ( this.wp_nonce ) {
-					headers['X-WP-Nonce'] = this.wp_nonce
-				}
-				axios.get( `/wp-json/localmeet/v1/group/${this.group.group_id}/leave`, {
-					headers: headers
-				}).then( response => {
+			if (this.user.username) {
+				this.apiFetch(`/wp-json/localmeet/v1/group/${this.group.group_id}/leave`, { headers: this.apiHeaders() })
+				.then(() => {
 					this.fetchGroup()
 					this.snackbar.message = `Left group '${this.group.name}'`
 					this.snackbar.show = true
 				})
-				return
 			}
 		},
 		leaveGroupConfirm() {
-			urlParams = new URLSearchParams(window.location.search)
-			token = urlParams.get('token')
-			axios.get( `/wp-json/localmeet/v1/group/${this.group.group_id}/leave/${token}` ).then( response => {
+			const urlParams = new URLSearchParams(window.location.search)
+			const token = urlParams.get('token')
+			this.apiFetch(`/wp-json/localmeet/v1/group/${this.group.group_id}/leave/${token}`)
+			.then(() => {
 				this.fetchGroup()
-				this.goToPath( this.groupHomeLink( this.group ) )
+				this.goToPath(this.groupHomeLink(this.group))
 				this.snackbar.message = `Left group '${this.group.name}'`
 				this.snackbar.show = true
 			})
 		},
-		updateGroup() {
-			group_id = this.edit_group.group.group_id
-			axios.post( `/wp-json/localmeet/v1/group/${group_id}/update`, {
-				'edit_group': this.edit_group
-			},{
+		sendTestEmail() {
+			this.edit_group.test_sending = true
+			fetch(`/wp-json/localmeet/v1/group/${this.group.group_id}/test-email`, {
+				method: 'POST',
 				headers: { 'X-WP-Nonce': this.wp_nonce }
-			}).then( response => {
-				if ( response.data.errors ) {
-					this.edit_group.errors = response.data.errors
+			})
+			.then(r => r.json())
+			.then(data => {
+				this.edit_group.test_sending = false
+				if (data.errors) {
+					this.snackbar.message = data.errors[0]
+					this.snackbar.show = true
 					return
 				}
-				this.fetchGroup()
-				this.edit_group = { show: false, errors: [], group: {} }
+				this.snackbar.message = data.message
+				this.snackbar.show = true
+			})
+		},
+		updateGroup() {
+			this.apiFetch(`/wp-json/localmeet/v1/group/${this.edit_group.group.group_id}/update`, {
+				method: 'POST',
+				headers: { 'X-WP-Nonce': this.wp_nonce, 'Content-Type': 'application/json' },
+				body: JSON.stringify({ edit_group: this.edit_group })
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (data.errors) {
+					this.edit_group.errors = data.errors
+					return
+				}
+				this.edit_group = { show: false, errors: [], test_sending: false, group: {} }
+				if (data.slug && data.slug !== this.group.slug) {
+					this.goToPath(`/group/${data.slug}`)
+				} else {
+					this.fetchGroup()
+				}
 			})
 		},
 		deleteGroup() {
-			proceed = confirm("Delete group? Warning all past events will be deleted.")
-			if ( ! proceed ) {
-				return
-			}
-			axios.get( `/wp-json/localmeet/v1/group/${this.group.group_id}/delete`, {
+			if (!confirm('Delete group? Warning all past events will be deleted.')) return
+			this.apiFetch(`/wp-json/localmeet/v1/group/${this.group.group_id}/delete`, {
+				method: 'DELETE',
 				headers: { 'X-WP-Nonce': this.wp_nonce }
-			}).then( response => {
+			})
+			.then(() => {
 				this.fetchGroups()
-				this.edit_group = { show: false, errors: [], group: {} }
-				this.snackbar.message = "Group has been deleted."
+				this.edit_group = { show: false, errors: [], test_sending: false, group: {} }
+				this.snackbar.message = 'Group has been deleted.'
 				this.snackbar.show = true
-				this.goToPath( "/" )
+				this.goToPath('/')
+				this.refreshUser()
 			})
 		},
+
+		addLocation() {
+			this.new_location.errors = []
+			if (!this.new_location.name.trim()) this.new_location.errors.push('Name is required.')
+			if (this.new_location.errors.length > 0) return
+			this.apiFetch(`/wp-json/localmeet/v1/group/${this.group.group_id}/locations/create`, {
+				method: 'POST',
+				headers: this.apiHeaders(),
+				body: JSON.stringify({ location: this.new_location })
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (data.errors) { this.new_location.errors = data.errors; return }
+				this.fetchGroup()
+				this.new_location = { show: false, name: '', address: '', notes: '', errors: [] }
+			})
+		},
+		editLocation(location) {
+			this.edit_location = { show: true, errors: [], location: JSON.parse(JSON.stringify(location)) }
+		},
+		updateLocation() {
+			this.edit_location.errors = []
+			if (!this.edit_location.location.name || !this.edit_location.location.name.trim()) this.edit_location.errors.push('Name is required.')
+			if (this.edit_location.errors.length > 0) return
+			this.apiFetch(`/wp-json/localmeet/v1/group/${this.group.group_id}/location/${this.edit_location.location.location_id}/update`, {
+				method: 'POST',
+				headers: this.apiHeaders(),
+				body: JSON.stringify({ location: this.edit_location.location })
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (data.errors) { this.edit_location.errors = data.errors; return }
+				this.fetchGroup()
+				this.edit_location = { show: false, errors: [], location: {} }
+			})
+		},
+		deleteLocation() {
+			if (!confirm('Delete this location?')) return
+			this.apiFetch(`/wp-json/localmeet/v1/group/${this.group.group_id}/location/${this.edit_location.location.location_id}/delete`, {
+				method: 'DELETE',
+				headers: this.apiHeaders()
+			})
+			.then(() => {
+				this.fetchGroup()
+				this.edit_location = { show: false, errors: [], location: {} }
+				this.snackbar.message = 'Location has been deleted.'
+				this.snackbar.show = true
+			})
+		},
+
+		fetchEvent() {
+			const organization = window.location.pathname.split('/').slice(1, 2).join('/')
+			const group = window.location.pathname.split('/').slice(2, 3).join('/')
+			const event = window.location.pathname.split('/').slice(3, 4).join('/')
+			this.apiFetch(`/wp-json/localmeet/v1/event/${event}?organization=${organization}&group=${group}`, { headers: this.apiHeaders() })
+			.then(r => r.json())
+			.then(data => {
+				this.event = data
+				this.event_loading = false
+			})
+			.catch(() => this.route = 'missing')
+		},
+		loadMoreComments() {
+			const organization = window.location.pathname.split('/').slice(1, 2).join('/')
+			const group = window.location.pathname.split('/').slice(2, 3).join('/')
+			const event_slug = window.location.pathname.split('/').slice(3, 4).join('/')
+			const page = Math.floor(this.event.comments.length / 50) + 1
+			this.apiFetch(`/wp-json/localmeet/v1/event/${event_slug}?organization=${organization}&group=${group}&comments_page=${page}`, { headers: this.apiHeaders() })
+			.then(r => r.json())
+			.then(data => {
+				this.event.comments = this.event.comments.concat(data.comments)
+				this.event.comments_total = data.comments_total
+			})
+		},
+		addEvent() {
+			this.new_event.errors = []
+			if (!this.new_event.name.trim()) this.new_event.errors.push('Name is required.')
+			if (!this.new_event.date) this.new_event.errors.push('Date is required.')
+			if (!this.new_event.time) this.new_event.errors.push('Time is required.')
+			if (this.new_event.date && this.new_event.time) {
+				const eventDate = new Date(`${this.new_event.date}T${this.new_event.time}`)
+				if (eventDate < new Date()) this.new_event.errors.push('Event date must be in the future.')
+			}
+			if (this.new_event.errors.length > 0) return
+			this.new_event.group_id = this.group.group_id
+			this.apiFetch('/wp-json/localmeet/v1/events/create', {
+				method: 'POST',
+				headers: { 'X-WP-Nonce': this.wp_nonce, 'Content-Type': 'application/json' },
+				body: JSON.stringify({ new_event: this.new_event })
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (data.errors) { this.new_event.errors = data.errors; return }
+				this.fetchGroup()
+				this.new_event = { show: false, time: '', end_time: '', date: '', name: '', location: '', location_name: '', location_address: '', group_id: '', description: '', capacity: '', recurrence_rule: '', image_id: null, image_url: null, image_picker: false, image_uploading: false, errors: [] }
+			})
+		},
+		announceEvent() {
+			if (!confirm('Are you sure you want to send out an event announcement?')) return
+			this.apiFetch(`/wp-json/localmeet/v1/event/${this.event.event_id}/announce`, {
+				method: 'POST',
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (data.errors) {
+					this.edit_event.errors = data.errors
+					this.snackbar.message = 'Errors: ' + data.errors
+					this.snackbar.show = true
+					return
+				}
+				this.snackbar.message = 'Emails sent.'
+				this.snackbar.show = true
+			})
+		},
+		editEvent() {
+			if (!this.event || !this.event.event_at) return
+			this.edit_event = { show: true, time: '', end_time: '', date: '', errors: [], image_picker: false, image_uploading: false, event: JSON.parse(JSON.stringify(this.event)) }
+			this.edit_event.date = this.edit_event.event.event_at.substr(0, 10)
+			this.edit_event.time = this.edit_event.event.event_at.substr(11, 8)
+			this.edit_event.end_time = this.edit_event.event.event_end_at ? this.edit_event.event.event_end_at.substr(11, 8) : ''
+			this.edit_event.event.location_name = this.event.location_name || ''
+			this.edit_event.event.location_address = this.event.location_address || ''
+		},
+		updateEvent() {
+			this.edit_event.errors = []
+			if (!this.edit_event.event.name || !this.edit_event.event.name.trim()) this.edit_event.errors.push('Name is required.')
+			if (!this.edit_event.date) this.edit_event.errors.push('Date is required.')
+			if (!this.edit_event.time) this.edit_event.errors.push('Time is required.')
+			if (this.edit_event.errors.length > 0) return
+			const event_id = this.edit_event.event.event_id
+			this.edit_event.event.event_at = `${this.edit_event.date} ${this.edit_event.time}`
+			this.edit_event.event.event_end_at = this.edit_event.end_time ? `${this.edit_event.date} ${this.edit_event.end_time}` : null
+			this.apiFetch(`/wp-json/localmeet/v1/event/${event_id}/update`, {
+				method: 'POST',
+				headers: { 'X-WP-Nonce': this.wp_nonce, 'Content-Type': 'application/json' },
+				body: JSON.stringify({ edit_event: this.edit_event })
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (data.errors) {
+					this.edit_event.errors = data.errors
+					return
+				}
+				this.edit_event = { show: false, time: '', date: '', errors: [], event: {} }
+				if (data.slug) {
+					const org = window.location.pathname.split('/').slice(1)[0]
+					const groupSlug = window.location.pathname.split('/').slice(2, 3)[0]
+					this.goToPath(`/${org}/${groupSlug}/${data.slug}`)
+				}
+				this.fetchEvent()
+				// Show prefilled notice if time/location changed
+				if (data.notice_subject) {
+					this.notice = { show: true, subject: data.notice_subject, message: data.notice_message, sending: false }
+				}
+			})
+		},
+		uploadImage(event, target) {
+			const file = event.dataTransfer?.files[0] || event.target?.files[0]
+			if (!file) return
+			if (!file.type.startsWith('image/')) {
+				this.snackbar.message = 'Please select an image file.'
+				this.snackbar.show = true
+				return
+			}
+			const formData = new FormData()
+			formData.append('file', file)
+			if (target === 'new_event') this.new_event.image_uploading = true
+			else this.edit_event.image_uploading = true
+			this.apiFetch('/wp-json/localmeet/v1/media/upload', {
+				method: 'POST',
+				headers: { 'X-WP-Nonce': this.wp_nonce },
+				body: formData
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (target === 'new_event') {
+					this.new_event.image_uploading = false
+					if (data.errors) { this.snackbar.message = data.errors[0]; this.snackbar.show = true; return }
+					this.new_event.image_id = data.id
+					this.new_event.image_url = data.url
+					this.new_event.image_picker = false
+				} else {
+					this.edit_event.image_uploading = false
+					if (data.errors) { this.snackbar.message = data.errors[0]; this.snackbar.show = true; return }
+					this.edit_event.event.image_id = data.id
+					this.edit_event.event.image_url = data.url
+					this.edit_event.image_picker = false
+				}
+				this.my_images.unshift({ id: data.id, url: data.url, thumbnail: data.thumbnail })
+			})
+			.catch(() => {
+				if (target === 'new_event') this.new_event.image_uploading = false
+				else this.edit_event.image_uploading = false
+			})
+			if (event.target?.value) event.target.value = ''
+		},
+		fetchMyImages() {
+			this.apiFetch('/wp-json/localmeet/v1/media/mine', { headers: this.apiHeaders() })
+			.then(r => r.json())
+			.then(data => this.my_images = data)
+		},
+		cancelEvent() {
+			if (!confirm('Cancel this event? Members will be prompted to be notified.')) return
+			this.apiFetch(`/wp-json/localmeet/v1/event/${this.event.event_id}/cancel`, {
+				method: 'POST',
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (data.errors) {
+					this.snackbar.message = data.errors[0]
+					this.snackbar.show = true
+					return
+				}
+				this.edit_event = { show: false, time: '', date: '', errors: [], event: {} }
+				this.fetchEvent()
+				this.fetchGroup()
+				// Show prefilled notice
+				if (data.notice_subject) {
+					this.notice = { show: true, subject: data.notice_subject, message: data.notice_message, sending: false }
+				}
+			})
+		},
+		sendNotice() {
+			if (!this.notice.subject || !this.notice.message) return
+			this.notice.sending = true
+			this.apiFetch(`/wp-json/localmeet/v1/group/${this.group.group_id}/notice`, {
+				method: 'POST',
+				headers: { 'X-WP-Nonce': this.wp_nonce, 'Content-Type': 'application/json' },
+				body: JSON.stringify({ subject: this.notice.subject, message: this.notice.message })
+			})
+			.then(r => r.json())
+			.then(data => {
+				this.notice.sending = false
+				if (data.errors) {
+					this.snackbar.message = data.errors[0]
+					this.snackbar.show = true
+					return
+				}
+				this.notice = { show: false, subject: '', message: '', sending: false }
+				this.snackbar.message = 'Notice sent to members.'
+				this.snackbar.show = true
+			})
+		},
+		deleteEvent() {
+			if (!confirm('Delete event?')) return
+			this.apiFetch(`/wp-json/localmeet/v1/event/${this.event.event_id}/delete`, {
+				method: 'DELETE',
+				headers: { 'X-WP-Nonce': this.wp_nonce }
+			})
+			.then(() => {
+				this.edit_event = { show: false, time: '', date: '', errors: [], event: {} }
+				this.snackbar.message = 'Event has been deleted.'
+				this.snackbar.show = true
+				this.goToPath(this.groupHomeLink(this.group))
+				this.fetchGroup()
+			})
+		},
+
+		attendEventRequest() {
+			this.attend_event.event_id = this.event.event_id
+			this.apiFetch('/wp-json/localmeet/v1/attendee/create', {
+				method: 'POST',
+				headers: this.apiHeaders(),
+				body: JSON.stringify({ request: this.attend_event })
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (data.errors) {
+					this.attend_event.errors = data.errors
+					return
+				}
+				this.snackbar.message = 'Please check your email to confirm.'
+				this.snackbar.show = true
+				this.fetchEvent()
+				this.attend_event = { show: false, event_id: '', first_name: '', last_name: '', email: '', errors: [] }
+			})
+		},
+		attendEvent() {
+			this.apiFetch(`/wp-json/localmeet/v1/event/${this.event.event_id}/attend`, {
+				method: 'POST',
+				headers: this.apiHeaders(),
+				body: JSON.stringify({ selection: this.attend_selection })
+			})
+			.then(() => {
+				this.attend_menu = false
+				this.fetchEvent()
+				this.attend_selection = ''
+			})
+		},
+
+		addComment() {
+			this.apiFetch(`/wp-json/localmeet/v1/event/${this.event.event_id}/comment/new`, {
+				method: 'POST',
+				headers: this.apiHeaders(),
+				body: JSON.stringify({ comment: this.new_comment })
+			})
+			.then(r => r.json())
+			.then(() => {
+				this.new_comment = ''
+				this.fetchEvent()
+			})
+		},
+		updateComment(comment) {
+			this.apiFetch(`/wp-json/localmeet/v1/event/${this.event.event_id}/comment/${comment.comment_id}/update`, {
+				method: 'POST',
+				headers: this.apiHeaders(),
+				body: JSON.stringify({ comment: comment.details_raw })
+			})
+			.then(r => r.json())
+			.then(() => {
+				this.editing_comment_id = null
+				this.fetchEvent()
+			})
+		},
+		deleteComment(comment_id) {
+			if (!confirm('Delete comment?')) return
+			const comment = this.event.comments.filter(c => c.comment_id === comment_id)
+			if (comment.length !== 1) return
+			this.apiFetch(`/wp-json/localmeet/v1/event/${this.event.event_id}/comment/delete`, {
+				method: 'POST',
+				headers: this.apiHeaders(),
+				body: JSON.stringify({ comment_id })
+			})
+			.then(r => r.json())
+			.then(() => this.fetchEvent())
+		},
+
+		transferOrganizer(member) {
+			if (!confirm(`Transfer organizer role to ${member.first_name} ${member.last_name}? You will become a regular member.`)) return
+			this.apiFetch(`/wp-json/localmeet/v1/group/${this.group.group_id}/transfer`, {
+				method: 'POST',
+				headers: this.apiHeaders(),
+				body: JSON.stringify({ user_id: member.user_id })
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (data.errors) {
+					this.snackbar.message = data.errors[0]
+					this.snackbar.show = true
+					return
+				}
+				this.fetchGroup()
+				this.snackbar.message = `Organizer role transferred to ${member.first_name} ${member.last_name}.`
+				this.snackbar.show = true
+			})
+		},
+		toggleMemberRole(member) {
+			const newRole = member.role === 'manager' ? 'member' : 'manager'
+			this.apiFetch(`/wp-json/localmeet/v1/group/${this.group.group_id}/member/${member.member_id}/role`, {
+				method: 'POST',
+				headers: this.apiHeaders(),
+				body: JSON.stringify({ role: newRole })
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (data.errors) {
+					this.snackbar.message = data.errors[0]
+					this.snackbar.show = true
+					return
+				}
+				member.role = data.role
+				this.snackbar.message = data.role === 'manager' ? 'Promoted to manager.' : 'Removed as manager.'
+				this.snackbar.show = true
+			})
+		},
+		toggleNotifications() {
+			this.apiFetch(`/wp-json/localmeet/v1/group/${this.group.group_id}/notifications`, {
+				method: 'POST',
+				headers: this.apiHeaders(),
+				body: JSON.stringify({ enabled: !this.group.email_notifications })
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (data.errors) return
+				this.group.email_notifications = data.email_notifications
+				this.snackbar.message = data.email_notifications ? 'Email notifications enabled.' : 'Email notifications muted.'
+				this.snackbar.show = true
+			})
+		},
+		moderateComment(comment_id, action) {
+			this.apiFetch(`/wp-json/localmeet/v1/event/${this.event.event_id}/comment/${comment_id}/moderate`, {
+				method: 'POST',
+				headers: this.apiHeaders(),
+				body: JSON.stringify({ action })
+			})
+			.then(r => r.json())
+			.then(() => this.fetchEvent())
+		},
+
+		fetchOrganization() {
+			const organization = window.location.pathname.split('/').slice(1, 2).join('/')
+			this.apiFetch(`/wp-json/localmeet/v1/organization/${organization}`, { headers: this.apiHeaders() })
+			.then(r => r.json())
+			.then(data => this.organization = data)
+			.catch(() => this.route = 'missing')
+		},
+
+		createInvite() {
+			this.invite.errors = []
+			this.apiFetch('/wp-json/localmeet/v1/invite/create', {
+				method: 'POST',
+				headers: { 'X-WP-Nonce': this.wp_nonce, 'Content-Type': 'application/json' },
+				body: JSON.stringify({ invite: this.invite })
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (data.errors) {
+					this.invite.errors = data.errors
+					return
+				}
+				this.snackbar.message = data.message
+				this.snackbar.show = true
+				this.invite = { email: '', group_allowance: 1, errors: [] }
+				this.fetchInvites()
+			})
+		},
+		fetchInvites() {
+			this.apiFetch('/wp-json/localmeet/v1/invites', { headers: this.apiHeaders() })
+			.then(r => r.json())
+			.then(data => this.invites = data)
+		},
+
 		populateStates() {
-			states_selected = []
-			select = this.states[ this.group_apply.address.country ]
-			if ( typeof select != 'object' ) {
+			const states_selected = []
+			const select = this.states[this.group_apply.address.country]
+			if (typeof select !== 'object') {
 				this.states_selected = []
 				return
 			}
-			states_by_country = Object.entries( select )
-			states_by_country.forEach( ([key, value]) => {
-				states_selected.push( { "text": value, "value": key } )
+			Object.entries(select).forEach(([key, value]) => {
+				states_selected.push({ text: value, value: key })
 			})
 			this.states_selected = states_selected
 		},
-		updateAccount() {
-			headers = {}
-			if ( this.wp_nonce ) {
-				headers['X-WP-Nonce'] = this.wp_nonce
-			}
-			axios.post( '/wp-json/localmeet/v1/login/', {
-				'command': "updateAccount",
-				'user': this.user
-			},{
-				headers: headers
-			}).then( response => {
-				if ( response.data.errors ) {
-					this.snackbar.message = "Failed to update your account."
-					this.snackbar.show = true
-					this.user.errors = response.data.errors
+
+		setPassword() {
+			this.user.errors = []
+			this.apiFetch('/wp-json/localmeet/v1/login/', {
+				method: 'POST',
+				headers: this.apiHeaders(),
+				body: JSON.stringify({ command: 'setPassword', password: this.user.new_password })
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (data.errors) {
+					this.user.errors = data.errors
 					return
 				}
-				this.snackbar.message = "Account updated."
+				this.user.password_not_set = false
+				this.user.new_password = ''
+				this.snackbar.message = 'Password has been set.'
 				this.snackbar.show = true
-				this.user.name = response.data.user.name
-				this.user.errors = []
-				this.user.new_password = ""
 			})
-			.catch( error => console.log( error ) );
+		},
+		updateAccount() {
+			this.apiFetch('/wp-json/localmeet/v1/login/', {
+				method: 'POST',
+				headers: this.apiHeaders(),
+				body: JSON.stringify({ command: 'updateAccount', user: this.user })
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (data.errors) {
+					this.snackbar.message = 'Failed to update your account.'
+					this.snackbar.show = true
+					this.user.errors = data.errors
+					return
+				}
+				this.snackbar.message = 'Account updated.'
+				this.snackbar.show = true
+				this.user.name = data.user.name
+				this.user.errors = []
+				this.user.new_password = ''
+			})
+			.catch(err => console.log(err))
 		},
 		signIn() {
 			this.login.loading = true
-			if ( ! this.$refs.login.validate() ) {
+			const form = this.$refs.loginForm
+			if (form && !form.checkValidity()) {
+				form.reportValidity()
 				this.login.loading = false
 				return
 			}
-			axios.post( '/wp-json/localmeet/v1/login/', {
-					'command': "signIn",
-					'login': this.login
-				})
-				.then( response => {
-					if ( typeof response.data.errors === 'undefined' ) {
-						window.location = window.location
-						return
-					}
-					this.login.errors = response.data.errors
-					this.login.loading = false
-				})
-				.catch(error => {
-					console.log(error);
-				});
+			this.apiFetch('/wp-json/localmeet/v1/login/', {
+				method: 'POST',
+				headers: this.apiHeaders(),
+				body: JSON.stringify({ command: 'signIn', login: this.login })
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (typeof data.errors === 'undefined') {
+					window.location = window.location
+					return
+				}
+				this.login.errors = data.errors
+				this.login.loading = false
+			})
+			.catch(err => console.log(err))
 		},
 		signOut() {
-			axios.post( '/wp-json/localmeet/v1/login/', {
-				command: "signOut" 
+			this.apiFetch('/wp-json/localmeet/v1/login/', {
+				method: 'POST',
+				headers: this.apiHeaders(),
+				body: JSON.stringify({ command: 'signOut' })
 			})
-			.then( response => {
-				window.location = "/"
-				this.route = "login"
-				this.wp_nonce = "";
+			.then(() => {
+				window.location = '/'
+				this.route = 'login'
+				this.wp_nonce = ''
 			})
 		},
 		resetPassword() {
 			this.login.loading = true
-			if ( ! this.$refs.reset.validate() ) {
+			const form = this.$refs.resetForm
+			if (form && !form.checkValidity()) {
+				form.reportValidity()
 				this.login.loading = false
 				return
 			}
-			axios.post( '/wp-json/localmeet/v1/login/', {
-					'command': "reset",
-					'login': this.login
-				})
-				.then( response => {
-					this.login.message = "A password reset email is on it's way."
-					this.login.loading = false
-				})
-				.catch(error => {
-					console.log(error);
-				});
+			this.apiFetch('/wp-json/localmeet/v1/login/', {
+				method: 'POST',
+				headers: this.apiHeaders(),
+				body: JSON.stringify({ command: 'reset', login: this.login })
+			})
+			.then(r => r.json())
+			.then(() => {
+				this.login.message = "A password reset email is on it's way."
+				this.login.loading = false
+			})
+			.catch(err => console.log(err))
 		},
 	}
-})
+}
 </script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </body>
 </html>

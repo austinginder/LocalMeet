@@ -1,0 +1,22 @@
+{
+    "name": "LocalMeet",
+    "slug": "localmeet",
+    "author": "<a href=\"https://austinginder.com\">Austin Ginder</a>",
+    "author_profile": "https://profiles.wordpress.org/austinginder",
+    "donate_link": "https://github.com/sponsors/austinginder",
+    "version": "2.0.0",
+    "download_url": "https://github.com/austinginder/localmeet/releases/download/v2.0.0/localmeet.zip",
+    "requires": "5.0",
+    "tested": "6.9.4",
+    "requires_php": "7.4",
+    "added": "2022-04-06 12:00:00",
+    "last_updated": "2026-04-08 12:00:00",
+    "homepage": "https://localmeet.io",
+    "sections": {
+        "description": "Self-starting local meetup groups powered by WordPress."
+    },
+    "banners": {
+        "low": "",
+        "high": ""
+    }
+}

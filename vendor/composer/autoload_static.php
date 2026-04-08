@@ -11,31 +11,31 @@ class ComposerStaticInitd3b0cfd4a7b3730160ae36177f406f00
     );
 
     public static $prefixLengthsPsr4 = array (
-        'L' => 
+        'L' =>
         array (
             'LocalMeet\\' => 10,
         ),
-        'E' => 
+        'E' =>
         array (
             'Eluceo\\iCal\\' => 12,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
-        'LocalMeet\\' => 
+        'LocalMeet\\' =>
         array (
             0 => __DIR__ . '/../..' . '/app',
         ),
-        'Eluceo\\iCal\\' => 
+        'Eluceo\\iCal\\' =>
         array (
             0 => __DIR__ . '/..' . '/eluceo/ical/src',
         ),
     );
 
     public static $prefixesPsr0 = array (
-        'P' => 
+        'P' =>
         array (
-            'Parsedown' => 
+            'Parsedown' =>
             array (
                 0 => __DIR__ . '/..' . '/erusev/parsedown',
             ),
@@ -44,78 +44,6 @@ class ComposerStaticInitd3b0cfd4a7b3730160ae36177f406f00
 
     public static $classMap = array (
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
-        'Eluceo\\iCal\\Domain\\Collection\\Events' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/Collection/Events.php',
-        'Eluceo\\iCal\\Domain\\Collection\\EventsArray' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/Collection/EventsArray.php',
-        'Eluceo\\iCal\\Domain\\Collection\\EventsGenerator' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/Collection/EventsGenerator.php',
-        'Eluceo\\iCal\\Domain\\Entity\\Calendar' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/Entity/Calendar.php',
-        'Eluceo\\iCal\\Domain\\Entity\\Event' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/Entity/Event.php',
-        'Eluceo\\iCal\\Domain\\Entity\\TimeZone' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/Entity/TimeZone.php',
-        'Eluceo\\iCal\\Domain\\Enum\\TimeZoneTransitionType' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/Enum/TimeZoneTransitionType.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\Alarm' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/Alarm.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\Alarm\\AbsoluteDateTimeTrigger' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/Alarm/AbsoluteDateTimeTrigger.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\Alarm\\Action' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/Alarm/Action.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\Alarm\\AudioAction' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/Alarm/AudioAction.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\Alarm\\DisplayAction' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/Alarm/DisplayAction.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\Alarm\\EmailAction' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/Alarm/EmailAction.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\Alarm\\RelativeTrigger' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/Alarm/RelativeTrigger.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\Alarm\\Trigger' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/Alarm/Trigger.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\Attachment' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/Attachment.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\BinaryContent' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/BinaryContent.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\Date' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/Date.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\DateTime' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/DateTime.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\EmailAddress' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/EmailAddress.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\GeographicPosition' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/GeographicPosition.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\Location' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/Location.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\MultiDay' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/MultiDay.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\Occurrence' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/Occurrence.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\Organizer' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/Organizer.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\PointInTime' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/PointInTime.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\SingleDay' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/SingleDay.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\TimeSpan' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/TimeSpan.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\TimeZoneTransition' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/TimeZoneTransition.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\Timestamp' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/Timestamp.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\UniqueIdentifier' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/UniqueIdentifier.php',
-        'Eluceo\\iCal\\Domain\\ValueObject\\Uri' => __DIR__ . '/..' . '/eluceo/ical/src/Domain/ValueObject/Uri.php',
-        'Eluceo\\iCal\\Presentation\\Component' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/Component.php',
-        'Eluceo\\iCal\\Presentation\\Component\\Property' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/Component/Property.php',
-        'Eluceo\\iCal\\Presentation\\Component\\Property\\Parameter' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/Component/Property/Parameter.php',
-        'Eluceo\\iCal\\Presentation\\Component\\Property\\Value' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/Component/Property/Value.php',
-        'Eluceo\\iCal\\Presentation\\Component\\Property\\Value\\AppleLocationGeoValue' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/Component/Property/Value/AppleLocationGeoValue.php',
-        'Eluceo\\iCal\\Presentation\\Component\\Property\\Value\\BinaryValue' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/Component/Property/Value/BinaryValue.php',
-        'Eluceo\\iCal\\Presentation\\Component\\Property\\Value\\DateTimeValue' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/Component/Property/Value/DateTimeValue.php',
-        'Eluceo\\iCal\\Presentation\\Component\\Property\\Value\\DateValue' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/Component/Property/Value/DateValue.php',
-        'Eluceo\\iCal\\Presentation\\Component\\Property\\Value\\DurationValue' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/Component/Property/Value/DurationValue.php',
-        'Eluceo\\iCal\\Presentation\\Component\\Property\\Value\\GeoValue' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/Component/Property/Value/GeoValue.php',
-        'Eluceo\\iCal\\Presentation\\Component\\Property\\Value\\IntegerValue' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/Component/Property/Value/IntegerValue.php',
-        'Eluceo\\iCal\\Presentation\\Component\\Property\\Value\\ListValue' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/Component/Property/Value/ListValue.php',
-        'Eluceo\\iCal\\Presentation\\Component\\Property\\Value\\TextValue' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/Component/Property/Value/TextValue.php',
-        'Eluceo\\iCal\\Presentation\\Component\\Property\\Value\\UriValue' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/Component/Property/Value/UriValue.php',
-        'Eluceo\\iCal\\Presentation\\Component\\Property\\Value\\UtcOffsetValue' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/Component/Property/Value/UtcOffsetValue.php',
-        'Eluceo\\iCal\\Presentation\\ContentLine' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/ContentLine.php',
-        'Eluceo\\iCal\\Presentation\\Factory\\AlarmFactory' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/Factory/AlarmFactory.php',
-        'Eluceo\\iCal\\Presentation\\Factory\\CalendarFactory' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/Factory/CalendarFactory.php',
-        'Eluceo\\iCal\\Presentation\\Factory\\DateTimeFactory' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/Factory/DateTimeFactory.php',
-        'Eluceo\\iCal\\Presentation\\Factory\\EventFactory' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/Factory/EventFactory.php',
-        'Eluceo\\iCal\\Presentation\\Factory\\TimeZoneFactory' => __DIR__ . '/..' . '/eluceo/ical/src/Presentation/Factory/TimeZoneFactory.php',
-        'Eluceo\\iCal\\Util\\DateTimeImmutableFactory' => __DIR__ . '/..' . '/eluceo/ical/src/Util/DateTimeImmutableFactory.php',
-        'LocalMeet\\Account' => __DIR__ . '/../..' . '/app/Account.php',
-        'LocalMeet\\App' => __DIR__ . '/../..' . '/app/App.php',
-        'LocalMeet\\AttendeeRequests' => __DIR__ . '/../..' . '/app/AttendeeRequests.php',
-        'LocalMeet\\Attendees' => __DIR__ . '/../..' . '/app/Attendees.php',
-        'LocalMeet\\Comments' => __DIR__ . '/../..' . '/app/Comments.php',
-        'LocalMeet\\DB' => __DIR__ . '/../..' . '/app/DB.php',
-        'LocalMeet\\Event' => __DIR__ . '/../..' . '/app/Event.php',
-        'LocalMeet\\Events' => __DIR__ . '/../..' . '/app/Events.php',
-        'LocalMeet\\Group' => __DIR__ . '/../..' . '/app/Group.php',
-        'LocalMeet\\GroupRequests' => __DIR__ . '/../..' . '/app/GroupRequests.php',
-        'LocalMeet\\Groups' => __DIR__ . '/../..' . '/app/Groups.php',
-        'LocalMeet\\Mailer' => __DIR__ . '/../..' . '/app/Mailer.php',
-        'LocalMeet\\Member' => __DIR__ . '/../..' . '/app/Member.php',
-        'LocalMeet\\MemberRequests' => __DIR__ . '/../..' . '/app/MemberRequests.php',
-        'LocalMeet\\Members' => __DIR__ . '/../..' . '/app/Members.php',
-        'LocalMeet\\Organizations' => __DIR__ . '/../..' . '/app/Organizations.php',
-        'LocalMeet\\User' => __DIR__ . '/../..' . '/app/User.php',
-        'Parsedown' => __DIR__ . '/..' . '/erusev/parsedown/Parsedown.php',
     );
 
     public static function getInitializer(ClassLoader $loader)

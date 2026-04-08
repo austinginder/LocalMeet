@@ -22,7 +22,7 @@ class Member {
     }
 
     public function leave() {
-        ( new Members )->update( [ "active" => 0 ], [ "member_id" => $this->member_id ] );
+        ( new Members )->update( [ "active" => 0, "left_at" => date( "Y-m-d H:i:s" ) ], [ "member_id" => $this->member_id ] );
     }
 
 }

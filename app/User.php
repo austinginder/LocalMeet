@@ -22,7 +22,17 @@ class User {
     }
 
     public function fetch() {
-        $user   = get_user_by( "ID", $this->user_id );
+        $user = get_user_by( "ID", $this->user_id );
+        if ( ! $user ) {
+            return (object) [
+                "user_id"      => 0,
+                "username"     => "",
+                "email"        => "",
+                "name"         => "",
+                "new_password" => "",
+                "errors"       => []
+            ];
+        }
         $record = [
             "user_id"      => $this->user_id,
             "username"     => $user->user_login,
@@ -43,6 +53,24 @@ class User {
 
     public function is_admin() {
         if ( is_array( $this->roles ) && in_array( 'administrator', $this->roles ) ) {
+            return true;
+        }
+        return false;
+    }
+
+    public function can_manage_group( $group ) {
+        if ( $this->is_admin() ) {
+            return true;
+        }
+        if ( empty( $group ) ) {
+            return false;
+        }
+        $owner_id = is_object( $group ) ? ( $group->owner_id ?? null ) : null;
+        if ( $this->user_id && $this->user_id == $owner_id ) {
+            return true;
+        }
+        $membership = ( new Members )->where( [ "user_id" => $this->user_id, "group_id" => $group->group_id, "active" => 1 ] );
+        if ( ! empty( $membership ) && property_exists( $membership[0], 'role' ) && $membership[0]->role === 'manager' ) {
             return true;
         }
         return false;
