@@ -46,6 +46,8 @@ function localmeet_redirect_non_admins() {
 	}
 }
 
+add_action( 'localmeet_send_email_batch', [ 'LocalMeet\EmailQueue', 'process_batch' ], 10, 3 );
+
 add_filter( 'get_avatar_url', 'localmeet_local_avatar_url', 10, 3 );
 function localmeet_local_avatar_url( $url, $id_or_email, $args ) {
 	$user_id = 0;
@@ -164,6 +166,30 @@ function localmeet_register_rest_endpoints() {
 		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/announce', [
 			'methods'             => 'POST',
 			'callback'            => 'localmeet_event_announce_func',
+			'permission_callback' => 'is_user_logged_in',
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/announce-preview', [
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_event_announce_preview_func',
+			'permission_callback' => 'is_user_logged_in',
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/announce-info', [
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_event_announce_info_func',
+			'permission_callback' => 'is_user_logged_in',
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/announce-status', [
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_event_announce_status_func',
 			'permission_callback' => 'is_user_logged_in',
 		]
 	);
@@ -897,8 +923,8 @@ function localmeet_group_notice_func( $request ) {
 	if ( empty( $subject ) || empty( $message ) ) {
 		return [ "errors" => [ "Subject and message are required." ] ];
 	}
-	LocalMeet\Mailer::send_notice( $group_id, $subject, $message );
-	return [ "message" => "Notice sent." ];
+	$result = LocalMeet\EmailQueue::start_notice( $group_id, $subject, $message );
+	return [ "message" => "Notice started.", "sending" => true, "job_id" => $result['job_id'] ?? null, "total" => $result['total'] ];
 }
 
 function localmeet_event_announce_func( $request ) {
@@ -907,6 +933,9 @@ function localmeet_event_announce_func( $request ) {
 	$event    = ( new LocalMeet\Events )->get( $event_id );
 	if ( empty( $event ) ) {
 		return [ "errors" => [ "Event not found." ] ];
+	}
+	if ( property_exists( $event, 'announced_at' ) && ! empty( $event->announced_at ) ) {
+		return [ "errors" => [ "This event has already been announced." ] ];
 	}
 	$group    = ( new LocalMeet\Groups )->get( $event->group_id );
 	if ( empty( $group ) ) {
@@ -918,8 +947,100 @@ function localmeet_event_announce_func( $request ) {
 	if ( ! LocalMeet\RateLimiter::check( 'announce', $user->user_id(), 2, 300 ) ) {
 		return [ "errors" => [ "Too many announcements. Please try again later." ] ];
 	}
-	LocalMeet\Mailer::announce_event( $event_id );
-	return [ "message" => "Announcement sent." ];
+	$progress = LocalMeet\EmailQueue::get_progress( 'announce', $event_id );
+	if ( $progress && $progress['status'] === 'sending' ) {
+		return [ "errors" => [ "Announcement is already being sent." ] ];
+	}
+	LocalMeet\EmailQueue::start_announcement( $event_id );
+	return [ "message" => "Announcement started.", "sending" => true ];
+}
+
+function localmeet_event_announce_preview_func( $request ) {
+	$user     = new LocalMeet\User;
+	$event_id = $request['event_id'];
+	$event    = ( new LocalMeet\Events )->get( $event_id );
+	if ( empty( $event ) ) {
+		return [ "errors" => [ "Event not found." ] ];
+	}
+	$group = ( new LocalMeet\Groups )->get( $event->group_id );
+	if ( empty( $group ) ) {
+		return [ "errors" => [ "Group not found." ] ];
+	}
+	if ( ! $user->can_manage_group( $group ) ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	if ( ! LocalMeet\RateLimiter::check( 'announce_preview', $user->user_id(), 5, 300 ) ) {
+		return [ "errors" => [ "Too many preview emails. Please try again later." ] ];
+	}
+	$post  = json_decode( file_get_contents( 'php://input' ) );
+	$email = ! empty( $post->email ) ? sanitize_email( $post->email ) : wp_get_current_user()->user_email;
+	if ( ! is_email( $email ) ) {
+		return [ "errors" => [ "Invalid email address." ] ];
+	}
+	LocalMeet\Mailer::announce_event_preview( $event_id, $email );
+	return [ "message" => "Preview sent to {$email}." ];
+}
+
+function localmeet_event_announce_info_func( $request ) {
+	$user     = new LocalMeet\User;
+	$event_id = $request['event_id'];
+	$event    = ( new LocalMeet\Events )->get( $event_id );
+	if ( empty( $event ) ) {
+		return [ "errors" => [ "Event not found." ] ];
+	}
+	$group = ( new LocalMeet\Groups )->get( $event->group_id );
+	if ( empty( $group ) ) {
+		return [ "errors" => [ "Group not found." ] ];
+	}
+	if ( ! $user->can_manage_group( $group ) ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	global $wpdb;
+	$table = $wpdb->prefix . 'localmeet_members';
+	$subscriber_count = (int) $wpdb->get_var( $wpdb->prepare(
+		"SELECT COUNT(*) FROM {$table} WHERE group_id = %d AND active = 1 AND (email_notifications IS NULL OR email_notifications != 0)",
+		$group->group_id
+	) );
+	$announced_at = property_exists( $event, 'announced_at' ) ? $event->announced_at : null;
+	$response = [ "subscriber_count" => $subscriber_count, "announced_at" => $announced_at ];
+	$progress = LocalMeet\EmailQueue::get_progress( 'announce', $event_id );
+	if ( $progress && $progress['status'] === 'sending' ) {
+		$response['sending'] = true;
+		$response['sent']    = $progress['sent'];
+		$response['total']   = $progress['total'];
+	}
+	return $response;
+}
+
+function localmeet_event_announce_status_func( $request ) {
+	$user     = new LocalMeet\User;
+	$event_id = $request['event_id'];
+	$event    = ( new LocalMeet\Events )->get( $event_id );
+	if ( empty( $event ) ) {
+		return [ "errors" => [ "Event not found." ] ];
+	}
+	$group = ( new LocalMeet\Groups )->get( $event->group_id );
+	if ( empty( $group ) ) {
+		return [ "errors" => [ "Group not found." ] ];
+	}
+	if ( ! $user->can_manage_group( $group ) ) {
+		return [ "errors" => [ "Permission denied." ] ];
+	}
+	$progress = LocalMeet\EmailQueue::get_progress( 'announce', $event_id );
+	if ( ! $progress ) {
+		return [ "status" => "idle" ];
+	}
+	$result = [
+		"status" => $progress['status'],
+		"sent"   => $progress['sent'],
+		"total"  => $progress['total'],
+	];
+	if ( $progress['status'] === 'complete' ) {
+		$event = ( new LocalMeet\Events )->get( $event_id );
+		$result['announced_at'] = property_exists( $event, 'announced_at' ) ? $event->announced_at : null;
+		LocalMeet\EmailQueue::cleanup( 'announce', $event_id );
+	}
+	return $result;
 }
 
 function localmeet_event_attend_func( $request ) {
@@ -992,9 +1113,21 @@ function localmeet_event_update_func( $request ) {
 	$capacity     = isset( $event->capacity ) && $event->capacity !== '' ? (int) $event->capacity : null;
 	$image_id     = property_exists( $event, 'image_id' ) ? ( ! empty( $event->image_id ) ? (int) $event->image_id : null ) : $current->image_id;
 
-	// Regenerate slug when name changes
+	// Use provided slug if changed, or regenerate when name changes
 	$new_slug = $current->slug;
-	if ( $event->name !== $current->name ) {
+	if ( ! empty( $event->slug ) && $event->slug !== $current->slug ) {
+		$new_slug = ( new LocalMeet\App )->slugify( $event->slug );
+		// Ensure unique within group (excluding current event)
+		global $wpdb;
+		$events_table = $wpdb->prefix . 'localmeet_events';
+		$conflict = $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$events_table} WHERE group_id = %d AND slug = %s AND event_id != %d",
+			$current->group_id, $new_slug, $current->event_id
+		) );
+		if ( $conflict ) {
+			$new_slug .= '-' . substr( md5( $current->event_id ), 0, 4 );
+		}
+	} elseif ( $event->name !== $current->name ) {
 		$new_slug = ( new LocalMeet\Group( $current->group_id ) )->generate_unique_event_slug( $event->name, $current->slug );
 	}
 

@@ -96,7 +96,7 @@
 			</button>
 			<button x-show="group.is_member" @click="toggleNotifications()" class="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
 				<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/></svg>
-				<span x-text="group.email_notifications ? 'Mute Emails' : 'Unmute Emails'"></span>
+				<span x-text="group.email_notifications ? 'Unsubscribe Emails' : 'Resubscribe Emails'"></span>
 			</button>
 			<button x-show="!group.is_member" @click="joinGroup()" class="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700">
 				Join Group
@@ -135,7 +135,7 @@
 				<div class="mt-5 space-y-2">
 					<button x-show="group.can_manage" @click="editGroup(); drawer = false" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Edit Group</button>
 					<button x-show="group.is_member && !group.owner" @click="leaveGroup(); drawer = false" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">Leave Group</button>
-					<button x-show="group.is_member" @click="toggleNotifications(); drawer = false" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700" x-text="group.email_notifications ? 'Mute Emails' : 'Unmute Emails'"></button>
+					<button x-show="group.is_member" @click="toggleNotifications(); drawer = false" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700" x-text="group.email_notifications ? 'Unsubscribe Emails' : 'Resubscribe Emails'"></button>
 					<button x-show="!group.is_member" @click="joinGroup(); drawer = false" class="w-full px-3 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700">Join Group</button>
 				</div>
 			</div>
@@ -423,7 +423,7 @@
 							<button @click="loadMoreEvents('upcoming')" class="text-sm text-primary-600 dark:text-primary-400 hover:underline font-medium">Load more upcoming events</button>
 						</div>
 						<div x-show="group.past && group.past.length > 0" class="px-5 py-2 bg-gray-50 dark:bg-gray-700/50 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-							<span x-text="(group.past_total || group.past.length) + ' '"></span>Past Events
+							<span x-text="(group.past_total || (group.past ? group.past.length : 0)) + ' '"></span>Past Events
 						</div>
 						<template x-for="evt in (group.past || [])" :key="evt.event_id">
 							<a :href="groupLink(evt.slug)" @click.prevent="goToPath(groupLink(evt.slug))" class="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer opacity-60">
@@ -946,11 +946,74 @@
 			<div>
 				<label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Message</label>
 				<textarea x-model="notice.message" rows="4" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-primary-600 outline-none text-sm dark:text-gray-100"></textarea>
-				<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Supports basic HTML. This will be sent to all group members who haven't muted emails.</p>
+				<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Supports basic HTML. This will be sent to all group members who haven't unsubscribed.</p>
 			</div>
 			<div class="flex justify-between items-center">
 				<button @click="notice.show = false" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">Skip</button>
 				<button @click="sendNotice()" :disabled="notice.sending" class="px-5 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium disabled:opacity-50" x-text="notice.sending ? 'Sending...' : 'Send Notice'"></button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Announce event modal -->
+<div x-show="announce.show" x-transition.opacity @keydown.escape.window="if (!announce.sending) { if (announce.poll_timer) clearInterval(announce.poll_timer); announce.show = false }" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+	<div class="fixed inset-0 bg-black/50" @click="if (!announce.sending) { if (announce.poll_timer) clearInterval(announce.poll_timer); announce.show = false }"></div>
+	<div class="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full" @click.stop>
+		<div class="bg-primary-600 dark:bg-gray-700 px-5 py-3 rounded-t-xl flex items-center justify-between">
+			<h3 class="font-semibold text-white">Announce Event</h3>
+			<button @click="if (announce.poll_timer) clearInterval(announce.poll_timer); announce.show = false" :disabled="announce.sending" class="text-white/70 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed">
+				<svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+			</button>
+		</div>
+		<div class="p-5">
+			<!-- Loading -->
+			<div x-show="announce.loading" class="flex justify-center py-8">
+				<svg class="w-6 h-6 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+			</div>
+
+			<!-- Errors -->
+			<template x-for="error in announce.errors">
+				<div class="p-3 mb-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm" x-text="error"></div>
+			</template>
+
+			<!-- Already announced -->
+			<div x-show="!announce.loading && event.announced_at" class="space-y-4">
+				<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+					<p class="text-sm text-blue-800 dark:text-blue-200">
+						This event was announced on <span x-text="event.announced_at ? new Date(event.announced_at.replace(' ', 'T')).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : ''"></span>.
+					</p>
+				</div>
+				<button @click="announce.show = false; notice = { show: true, subject: '', message: '', sending: false }" class="w-full px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600">
+					Send follow-up message
+				</button>
+			</div>
+
+			<!-- Not yet announced -->
+			<div x-show="!announce.loading && !event.announced_at" class="space-y-4">
+				<div x-show="!announce.sending" class="space-y-2">
+					<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Preview</h4>
+					<button @click="sendAnnouncementPreview()" class="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-left">
+						Send myself a preview email
+					</button>
+					<div class="flex gap-2">
+						<input type="email" x-model="announce.preview_email" placeholder="Email address" class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg text-sm dark:text-gray-100 outline-none focus:ring-2 focus:ring-primary-600 focus:border-primary-600">
+						<button @click="sendAnnouncementPreview(announce.preview_email)" :disabled="!announce.preview_email" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed shrink-0">
+							Send preview
+						</button>
+					</div>
+				</div>
+				<div x-show="!announce.sending" class="border-t border-gray-200 dark:border-gray-700"></div>
+				<button @click="sendAnnouncement()" :disabled="announce.sending" class="w-full px-4 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 disabled:opacity-50">
+					<span x-show="!announce.sending">Send announcement to <span x-text="announce.subscriber_count"></span> subscribed members</span>
+					<span x-show="announce.sending">Sending... <span x-text="announce.sent"></span>/<span x-text="announce.total"></span> sent</span>
+				</button>
+				<div x-show="announce.sending" class="space-y-1">
+					<div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+						<div class="bg-primary-600 h-2 rounded-full transition-all duration-300" :style="'width: ' + (announce.total > 0 ? Math.round(announce.sent / announce.total * 100) : 0) + '%'"></div>
+					</div>
+					<p class="text-xs text-gray-500 dark:text-gray-400 text-center" x-text="announce.total > 0 ? Math.round(announce.sent / announce.total * 100) + '% complete' : 'Starting...'"></p>
+				</div>
 			</div>
 		</div>
 	</div>

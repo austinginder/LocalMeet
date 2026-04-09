@@ -111,6 +111,7 @@ function localmeet() {
 		edit_event: { show: false, time: "", end_time: "", date: "", errors: [], image_picker: false, image_uploading: false, event: {} },
 		my_images: [],
 		notice: { show: false, subject: '', message: '', sending: false },
+		announce: { show: false, loading: false, sending: false, preview_email: '', subscriber_count: 0, sent: 0, total: 0, errors: [], poll_timer: null },
 		new_location: { show: false, name: "", address: "", notes: "", errors: [] },
 		edit_location: { show: false, errors: [], location: {} },
 		attend_event: { show: false, event_id: "", first_name: "", last_name: "", email: "", errors: [] },
@@ -372,6 +373,10 @@ function localmeet() {
 				const urlParams = new URLSearchParams(window.location.search)
 				if (urlParams.get('joined')) {
 					this.snackbar.message = 'Welcome to the group!'
+					this.snackbar.show = true
+				}
+				if (urlParams.get('muted') === 'confirmed') {
+					this.snackbar.message = 'Unsubscribed. You will no longer receive emails from this group.'
 					this.snackbar.show = true
 				}
 			}
@@ -715,7 +720,27 @@ function localmeet() {
 			})
 		},
 		announceEvent() {
-			if (!confirm('Are you sure you want to send out an event announcement?')) return
+			this.announce = { show: true, loading: true, sending: false, preview_email: '', subscriber_count: 0, sent: 0, total: 0, errors: [], poll_timer: null }
+			this.apiFetch(`/wp-json/localmeet/v1/event/${this.event.event_id}/announce-info`, { headers: this.apiHeaders() })
+			.then(r => r.json())
+			.then(data => {
+				this.announce.loading = false
+				if (data.errors) { this.announce.errors = data.errors; return }
+				this.announce.subscriber_count = data.subscriber_count
+				if (data.announced_at) this.event.announced_at = data.announced_at
+				if (data.sending) {
+					this.announce.sending = true
+					this.announce.sent = data.sent
+					this.announce.total = data.total
+					this.pollAnnounceStatus()
+				}
+			})
+		},
+		sendAnnouncement() {
+			this.announce.sending = true
+			this.announce.sent = 0
+			this.announce.total = this.announce.subscriber_count
+			this.announce.errors = []
 			this.apiFetch(`/wp-json/localmeet/v1/event/${this.event.event_id}/announce`, {
 				method: 'POST',
 				headers: { 'X-WP-Nonce': this.wp_nonce }
@@ -723,12 +748,54 @@ function localmeet() {
 			.then(r => r.json())
 			.then(data => {
 				if (data.errors) {
-					this.edit_event.errors = data.errors
-					this.snackbar.message = 'Errors: ' + data.errors
+					this.announce.sending = false
+					this.announce.errors = data.errors
+					return
+				}
+				this.pollAnnounceStatus()
+			})
+		},
+		pollAnnounceStatus() {
+			this.announce.poll_timer = setInterval(() => {
+				this.apiFetch(`/wp-json/localmeet/v1/event/${this.event.event_id}/announce-status`, { headers: this.apiHeaders() })
+				.then(r => r.json())
+				.then(data => {
+					if (data.status === 'sending') {
+						this.announce.sent = data.sent
+						this.announce.total = data.total
+					}
+					if (data.status === 'complete') {
+						clearInterval(this.announce.poll_timer)
+						this.announce.poll_timer = null
+						this.announce.sending = false
+						this.announce.sent = data.total
+						this.event.announced_at = data.announced_at
+						this.snackbar.message = 'Announcement sent to all subscribers.'
+						this.snackbar.show = true
+					}
+					if (data.status === 'idle' && this.announce.sending) {
+						clearInterval(this.announce.poll_timer)
+						this.announce.poll_timer = null
+						this.announce.sending = false
+					}
+				})
+			}, 2000)
+		},
+		sendAnnouncementPreview(email) {
+			this.announce.errors = []
+			this.apiFetch(`/wp-json/localmeet/v1/event/${this.event.event_id}/announce-preview`, {
+				method: 'POST',
+				headers: { 'X-WP-Nonce': this.wp_nonce, 'Content-Type': 'application/json' },
+				body: JSON.stringify({ email: email || '' })
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (data.errors) {
+					this.snackbar.message = data.errors[0]
 					this.snackbar.show = true
 					return
 				}
-				this.snackbar.message = 'Emails sent.'
+				this.snackbar.message = data.message
 				this.snackbar.show = true
 			})
 		},
@@ -851,14 +918,14 @@ function localmeet() {
 			})
 			.then(r => r.json())
 			.then(data => {
-				this.notice.sending = false
 				if (data.errors) {
+					this.notice.sending = false
 					this.snackbar.message = data.errors[0]
 					this.snackbar.show = true
 					return
 				}
 				this.notice = { show: false, subject: '', message: '', sending: false }
-				this.snackbar.message = 'Notice sent to members.'
+				this.snackbar.message = `Sending notice to ${data.total} members...`
 				this.snackbar.show = true
 			})
 		},
@@ -1029,7 +1096,7 @@ function localmeet() {
 			.then(data => {
 				if (data.errors) return
 				this.group.email_notifications = data.email_notifications
-				this.snackbar.message = data.email_notifications ? 'Email notifications enabled.' : 'Email notifications muted.'
+				this.snackbar.message = data.email_notifications ? 'Email notifications enabled.' : 'Unsubscribed from email notifications.'
 				this.snackbar.show = true
 			})
 		},
