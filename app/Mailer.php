@@ -298,8 +298,6 @@ class Mailer {
         $attachments = [ "{$path}invite.ics" ];
         $reply_to    = "Reply-To: {$group_data->reply_to_name} <{$group_data->reply_to_email}>";
 
-        $rsvp_button = self::action_button( $event_link, 'RSVP to Attend' );
-
         $location_name    = '';
         $location_address = '';
         $location_data    = json_decode( $event->location );
@@ -338,7 +336,7 @@ class Mailer {
             </table>
             <p>Hi {greeting_name},</p>
             {$event->description}
-            {$rsvp_button}
+            {rsvp_button}
             <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #edf2f7; font-size: 13px; color: #a0aec0;'>
                 <a href='{mute_link}' style='color: #a0aec0;'>Unsubscribe</a> &middot; <a href='{leave_link}' style='color: #a0aec0;'>Leave group</a>
             </div>
@@ -373,7 +371,11 @@ class Mailer {
             $full_name     = trim( "{$member->first_name} {$member->last_name}" );
             $greeting_name = $member->first_name ?: ( $full_name ?: 'there' );
 
+            $rsvp_link   = home_url() . "/group/{$group_data->slug}/{$announcement['event']->slug}/rsvp?token={$token}";
+            $rsvp_button = self::action_button( $rsvp_link, 'RSVP to Attend' );
+
             $content = str_replace( '{greeting_name}', $greeting_name, $announcement['content_body'] );
+            $content = str_replace( '{rsvp_button}', $rsvp_button, $content );
             $content = str_replace( '{leave_link}', $leave_link, $content );
             $content = str_replace( '{mute_link}', $mute_link, $content );
 
@@ -394,7 +396,11 @@ class Mailer {
         $current_user  = wp_get_current_user();
         $greeting_name = $current_user->first_name ?: 'there';
 
+        $event_link   = home_url() . "/group/{$announcement['group_data']->slug}/{$announcement['event']->slug}";
+        $rsvp_button  = self::action_button( $event_link, 'RSVP to Attend' );
+
         $content = str_replace( '{greeting_name}', $greeting_name, $announcement['content_body'] );
+        $content = str_replace( '{rsvp_button}', $rsvp_button, $content );
         $content = str_replace( '{leave_link}', '#preview-leave', $content );
         $content = str_replace( '{mute_link}', '#preview-mute', $content );
 

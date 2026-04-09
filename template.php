@@ -131,6 +131,7 @@ function localmeet() {
 		past_events_page: 1,
 		merge_users: { show: false, loading: false, errors: [], candidates: [], members: [], keep_user: null, merge_user: null },
 		member_leave: {},
+		rsvp_data: {},
 		login: { show: false, user_login: "", user_password: "", errors: "", loading: false, lost_password: false, message: "" },
 		organization: {},
 		page: "",
@@ -319,8 +320,10 @@ function localmeet() {
 			if (typeof new_route === 'undefined') {
 				const event = window.location.pathname.split('/').slice(3, 4).join('/')
 				if (page_depth === 1) new_route = 'organization'
+				const sub_action = window.location.pathname.split('/').slice(4, 5).join('/')
 				if (page_depth === 2 || event === 'leave' || event === 'members' || event === 'events' || event === 'locations') new_route = 'group'
-				if (page_depth === 3 && event !== 'leave' && event !== 'members' && event !== 'events' && event !== 'locations') {
+				if (sub_action === 'rsvp') new_route = 'group'
+				if (page_depth === 3 && event !== 'leave' && event !== 'members' && event !== 'events' && event !== 'locations' && !sub_action) {
 					this.event_loading = true
 					new_route = 'event'
 				}
@@ -463,9 +466,13 @@ function localmeet() {
 			.then(r => r.json())
 			.then(data => {
 				const action = window.location.pathname.split('/').slice(3, 4).join('/')
+				const sub_action_group = window.location.pathname.split('/').slice(4, 5).join('/')
 				if (action === 'leave') {
 					data.show = 'leave'
 					this.fetchLeave()
+				} else if (sub_action_group === 'rsvp') {
+					data.show = 'rsvp'
+					this.fetchRsvp()
 				} else if (action === 'members') {
 					data.show = 'members'
 				} else if (action === 'events') {
@@ -514,6 +521,37 @@ function localmeet() {
 			.then(r => r.json())
 			.then(data => this.member_leave = data)
 			.catch(() => this.route = 'missing')
+		},
+		fetchRsvp() {
+			const urlParams = new URLSearchParams(window.location.search)
+			const token = urlParams.get('token')
+			const event_slug = window.location.pathname.split('/').slice(3, 4).join('/')
+			this.apiFetch(`/wp-json/localmeet/v1/event/${event_slug}/rsvp-info/${token}`)
+			.then(r => r.json())
+			.then(data => {
+				if (data.code) { this.route = 'missing'; return }
+				this.rsvp_data = data
+			})
+			.catch(() => this.route = 'missing')
+		},
+		confirmRsvp() {
+			const urlParams = new URLSearchParams(window.location.search)
+			const token = urlParams.get('token')
+			const event_slug = window.location.pathname.split('/').slice(3, 4).join('/')
+			this.apiFetch(`/wp-json/localmeet/v1/event/${event_slug}/rsvp-confirm/${token}`, {
+				method: 'POST'
+			})
+			.then(r => r.json())
+			.then(data => {
+				if (data.errors) {
+					this.snackbar.message = data.errors[0]
+					this.snackbar.show = true
+					return
+				}
+				this.rsvp_data.is_going = true
+				this.snackbar.message = "You're going!"
+				this.snackbar.show = true
+			})
 		},
 		editGroup() {
 			this.edit_group = { show: true, errors: [], test_sending: false, group: JSON.parse(JSON.stringify(this.group)) }

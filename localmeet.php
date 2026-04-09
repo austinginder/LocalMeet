@@ -195,6 +195,24 @@ function localmeet_register_rest_endpoints() {
 	);
 
 	register_rest_route(
+		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/rsvp-info/(?P<token>[a-zA-Z0-9-]+)', [
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_event_rsvp_info_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/rsvp-confirm/(?P<token>[a-zA-Z0-9-]+)', [
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_event_rsvp_confirm_func',
+			'permission_callback' => '__return_true',
+			'show_in_index'       => false
+		]
+	);
+
+	register_rest_route(
 		'localmeet/v1', '/event/(?P<event_id>[a-zA-Z0-9-]+)/delete', [
 			'methods'             => 'DELETE',
 			'callback'            => 'localmeet_event_delete_func',
@@ -1043,6 +1061,92 @@ function localmeet_event_announce_status_func( $request ) {
 	return $result;
 }
 
+function localmeet_validate_member_token( $token ) {
+	$parts     = explode( "-", $token, 2 );
+	$member_id = $parts[0] ?? '';
+	$hash      = $parts[1] ?? '';
+	if ( empty( $member_id ) || empty( $hash ) ) {
+		return null;
+	}
+	$member_data = ( new LocalMeet\Members )->get( $member_id );
+	if ( ! $member_data || wp_hash( $member_data->created_at ) !== $hash ) {
+		return null;
+	}
+	return $member_data;
+}
+
+function localmeet_event_rsvp_info_func( $request ) {
+	$token   = $request['token'];
+	$member  = localmeet_validate_member_token( $token );
+	if ( ! $member ) {
+		return new WP_Error( 'invalid_token', 'Invalid or expired link.', [ 'status' => 403 ] );
+	}
+
+	$event_slug = $request['event_id'];
+	$lookup     = ( new LocalMeet\Events )->where( [ "slug" => $event_slug, "group_id" => $member->group_id ] );
+	if ( empty( $lookup ) ) {
+		return new WP_Error( 'not_found', 'Event not found.', [ 'status' => 404 ] );
+	}
+	$event_id = $lookup[0]->event_id;
+	$event    = ( new LocalMeet\Event( $event_id ) )->fetch();
+
+	$user      = get_userdata( $member->user_id );
+	$attending = ( new LocalMeet\Attendees )->where( [ "user_id" => $member->user_id, "event_id" => $event_id, "going" => 1 ] );
+
+	return [
+		"event_name"       => $event->name,
+		"event_at"         => $event->event_at,
+		"event_end_at"     => $event->event_end_at ?? null,
+		"description"      => $event->description ?? '',
+		"location_name"    => $event->location_name ?? '',
+		"location_address" => $event->location_address ?? '',
+		"attendees"        => $event->attendees ?? [],
+		"first_name"       => $user ? $user->first_name : '',
+		"is_going"         => ! empty( $attending ),
+	];
+}
+
+function localmeet_event_rsvp_confirm_func( $request ) {
+	$token   = $request['token'];
+	$member  = localmeet_validate_member_token( $token );
+	if ( ! $member ) {
+		return new WP_Error( 'invalid_token', 'Invalid or expired link.', [ 'status' => 403 ] );
+	}
+
+	if ( ! $member->active ) {
+		return [ "errors" => [ "You must join the group before RSVPing." ] ];
+	}
+
+	$event_slug = $request['event_id'];
+	$lookup_evt = ( new LocalMeet\Events )->where( [ "slug" => $event_slug, "group_id" => $member->group_id ] );
+	if ( empty( $lookup_evt ) ) {
+		return [ "errors" => [ "Event not found." ] ];
+	}
+	$event_id   = $lookup_evt[0]->event_id;
+	$event_data = $lookup_evt[0];
+
+	// Capacity check
+	if ( $event_data->capacity ) {
+		$going_count = ( new LocalMeet\Attendees )->count_where( [ "event_id" => $event_id, "going" => 1 ] );
+		$existing    = ( new LocalMeet\Attendees )->where( [ "user_id" => $member->user_id, "event_id" => $event_id, "going" => 1 ] );
+		if ( empty( $existing ) && $going_count >= (int) $event_data->capacity ) {
+			return [ "errors" => [ "This event is full." ] ];
+		}
+	}
+
+	$lookup = ( new LocalMeet\Attendees )->where( [ "user_id" => $member->user_id, "event_id" => $event_id ] );
+	if ( count( $lookup ) > 0 ) {
+		foreach ( $lookup as $attendee ) {
+			( new LocalMeet\Attendees )->update( [ "going" => 1 ], [ "attendee_id" => $attendee->attendee_id ] );
+		}
+	} else {
+		$time_now = date( "Y-m-d H:i:s" );
+		( new LocalMeet\Attendees )->insert( [ "created_at" => $time_now, "user_id" => $member->user_id, "event_id" => $event_id, "going" => 1 ] );
+	}
+
+	return [ "success" => true ];
+}
+
 function localmeet_event_attend_func( $request ) {
 	$going     = 0;
 	$user      = ( new LocalMeet\User )->fetch();
@@ -1051,6 +1155,16 @@ function localmeet_event_attend_func( $request ) {
 		$going = 1;
 	}
 	$event_id  = $request['event_id'];
+
+	// Membership check
+	$event_data = ( new LocalMeet\Events )->get( $event_id );
+	if ( empty( $event_data ) ) {
+		return [ "errors" => [ "Event not found." ] ];
+	}
+	$is_member = ( new LocalMeet\Members )->where( [ "user_id" => $user->user_id, "group_id" => $event_data->group_id, "active" => 1 ] );
+	if ( empty( $is_member ) ) {
+		return [ "errors" => [ "You must join the group before RSVPing." ] ];
+	}
 
 	// Capacity check when marking as going
 	if ( $going ) {

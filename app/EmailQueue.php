@@ -49,6 +49,7 @@ class EmailQueue {
                 'attachments'  => $announcement['attachments'],
                 'reply_to'     => $announcement['reply_to'],
                 'event_name'   => $announcement['event']->name,
+                'event_slug'   => $announcement['event']->slug,
                 'group_name'   => $group_data->name,
                 'group_slug'   => $group_data->slug,
             ],
@@ -137,7 +138,11 @@ class EmailQueue {
             $full_name     = trim( "{$member->first_name} {$member->last_name}" );
             $greeting_name = $member->first_name ?: ( $full_name ?: 'there' );
 
+            $rsvp_link   = home_url() . "/group/{$announcement['group_slug']}/{$announcement['event_slug']}/rsvp?token={$token}";
+            $rsvp_button = Mailer::action_button_public( $rsvp_link, 'RSVP to Attend' );
+
             $content = str_replace( '{greeting_name}', $greeting_name, $announcement['content_body'] );
+            $content = str_replace( '{rsvp_button}', $rsvp_button, $content );
             $content = str_replace( '{leave_link}', $leave_link, $content );
             $content = str_replace( '{mute_link}', $mute_link, $content );
 
