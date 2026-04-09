@@ -507,9 +507,6 @@
 					</div>
 				</div>
 
-				<!-- Featured image -->
-				<img x-show="event.image_url" :src="event.image_url" :alt="event.name" class="w-full h-56 object-cover">
-
 				<!-- RSVP bar -->
 				<div x-show="event.status === 'upcoming' && !event.cancelled_at" class="px-5 py-2.5 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 flex items-center justify-end gap-3">
 					<span x-show="event.is_full && attend_selection !== 'going'" class="text-sm font-medium text-red-600 dark:text-red-400">Event is full</span>
@@ -536,6 +533,7 @@
 				<!-- Event content -->
 				<div class="md:flex">
 					<div class="flex-1 p-6 event">
+						<img x-show="event.image_url" :src="event.image_url" :alt="event.name" class="w-full rounded-lg mb-5 object-cover">
 						<div class="space-y-1.5 mb-5">
 							<div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
 								<svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/></svg>
