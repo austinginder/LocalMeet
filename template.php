@@ -128,6 +128,7 @@ function localmeet() {
 		group_search: "",
 		event_search: "",
 		past_events_page: 1,
+		merge_users: { show: false, loading: false, errors: [], candidates: [], members: [], keep_user: null, merge_user: null },
 		member_leave: {},
 		login: { show: false, user_login: "", user_password: "", errors: "", loading: false, lost_password: false, message: "" },
 		organization: {},
@@ -674,6 +675,7 @@ function localmeet() {
 			.then(data => {
 				this.event = data
 				this.event_loading = false
+				this.attend_selection = (data.attendees || []).some(a => a.is_me) ? 'going' : (data.attendees_not || []).some(a => a.is_me) ? 'not-going' : ''
 			})
 			.catch(() => this.route = 'missing')
 		},
@@ -903,7 +905,6 @@ function localmeet() {
 			.then(() => {
 				this.attend_menu = false
 				this.fetchEvent()
-				this.attend_selection = ''
 			})
 		},
 
@@ -961,6 +962,42 @@ function localmeet() {
 				this.fetchGroup()
 				this.snackbar.message = `Organizer role transferred to ${member.first_name} ${member.last_name}.`
 				this.snackbar.show = true
+			})
+		},
+		openMergeUsers() {
+			this.merge_users = { show: true, loading: true, errors: [], candidates: [], members: [], keep_user: null, merge_user: null }
+			this.apiFetch(`/wp-json/localmeet/v1/group/${this.group.group_id}/merge-users/candidates`, { headers: this.apiHeaders() })
+			.then(r => r.json())
+			.then(data => {
+				this.merge_users.loading = false
+				if (data.errors) { this.merge_users.errors = data.errors; return }
+				this.merge_users.candidates = data.candidates
+				this.merge_users.members = data.members
+			})
+		},
+		selectMergePair(keep, merge) {
+			this.merge_users.keep_user = keep.user_id
+			this.merge_users.merge_user = merge.user_id
+		},
+		executeMerge() {
+			const keep = this.merge_users.members.find(m => m.user_id == this.merge_users.keep_user)
+			const merge = this.merge_users.members.find(m => m.user_id == this.merge_users.merge_user)
+			if (!keep || !merge) { this.merge_users.errors = ['Select both users.']; return }
+			if (!confirm(`Merge "${merge.display_name} (${merge.email})" into "${keep.display_name} (${keep.email})"?\n\nThe merged account will be permanently deleted.`)) return
+			this.merge_users.loading = true
+			this.apiFetch(`/wp-json/localmeet/v1/group/${this.group.group_id}/merge-users`, {
+				method: 'POST',
+				headers: this.apiHeaders(),
+				body: JSON.stringify({ keep_user_id: keep.user_id, merge_user_id: merge.user_id })
+			})
+			.then(r => r.json())
+			.then(data => {
+				this.merge_users.loading = false
+				if (data.errors) { this.merge_users.errors = data.errors; return }
+				this.merge_users.show = false
+				this.snackbar.message = data.message
+				this.snackbar.show = true
+				this.fetchGroup()
 			})
 		},
 		toggleMemberRole(member) {

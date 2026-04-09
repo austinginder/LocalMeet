@@ -46,6 +46,27 @@ function localmeet_redirect_non_admins() {
 	}
 }
 
+add_filter( 'get_avatar_url', 'localmeet_local_avatar_url', 10, 3 );
+function localmeet_local_avatar_url( $url, $id_or_email, $args ) {
+	$user_id = 0;
+	if ( is_numeric( $id_or_email ) ) {
+		$user_id = (int) $id_or_email;
+	} elseif ( is_string( $id_or_email ) ) {
+		$user = get_user_by( 'email', $id_or_email );
+		if ( $user ) $user_id = $user->ID;
+	} elseif ( $id_or_email instanceof \WP_User ) {
+		$user_id = $id_or_email->ID;
+	}
+	if ( $user_id ) {
+		$local = get_user_meta( $user_id, 'localmeet_avatar', true );
+		if ( $local ) {
+			$avatar_url = wp_get_attachment_url( $local );
+			if ( $avatar_url ) return $avatar_url;
+		}
+	}
+	return $url;
+}
+
 add_filter( 'show_admin_bar', 'localmeet_hide_admin_bar' );
 function localmeet_hide_admin_bar( $show ) {
 	if ( ! current_user_can( 'manage_options' ) ) {
@@ -500,6 +521,24 @@ function localmeet_register_rest_endpoints() {
 			'methods'             => 'GET',
 			'callback'            => 'localmeet_invite_accept_func',
 			'permission_callback' => '__return_true',
+			'show_in_index'       => false
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/group/(?P<group_id>[0-9]+)/merge-users/candidates', [
+			'methods'             => 'GET',
+			'callback'            => 'localmeet_merge_users_candidates_func',
+			'permission_callback' => 'is_user_logged_in',
+			'show_in_index'       => false
+		]
+	);
+
+	register_rest_route(
+		'localmeet/v1', '/group/(?P<group_id>[0-9]+)/merge-users', [
+			'methods'             => 'POST',
+			'callback'            => 'localmeet_merge_users_func',
+			'permission_callback' => 'is_user_logged_in',
 			'show_in_index'       => false
 		]
 	);
@@ -2179,4 +2218,145 @@ function localmeet_title() {
 function localmeet_content() {
 	$seo = localmeet_seo_data();
 	echo $seo['content'];
+}
+
+function localmeet_merge_users_candidates_func( $request ) {
+	$user     = new LocalMeet\User;
+	$group_id = (int) $request['group_id'];
+	$group    = ( new LocalMeet\Groups )->get( $group_id );
+	if ( ! $group || ! $user->can_manage_group( $group ) ) {
+		return [ 'errors' => [ 'Permission denied.' ] ];
+	}
+
+	global $wpdb;
+	$members_table = $wpdb->prefix . 'localmeet_members';
+
+	$member_rows = $wpdb->get_results( $wpdb->prepare(
+		"SELECT m.user_id, m.created_at, u.display_name, u.user_email
+		 FROM {$members_table} m
+		 JOIN {$wpdb->users} u ON u.ID = m.user_id
+		 WHERE m.group_id = %d AND m.active = 1
+		 ORDER BY u.display_name, m.created_at",
+		$group_id
+	) );
+
+	$members = [];
+	$by_name = [];
+	foreach ( $member_rows as $row ) {
+		$member = [
+			'user_id'      => (int) $row->user_id,
+			'display_name' => $row->display_name,
+			'email'        => $row->user_email,
+			'avatar'       => get_avatar_url( $row->user_email, [ 'size' => 80 ] ),
+			'joined'       => $row->created_at,
+		];
+		$members[] = $member;
+		$by_name[ $row->display_name ][] = $member;
+	}
+
+	$candidates = [];
+	foreach ( $by_name as $name => $group_members ) {
+		if ( count( $group_members ) > 1 ) {
+			$candidates[] = [ 'name' => $name, 'users' => $group_members ];
+		}
+	}
+
+	return [ 'candidates' => $candidates, 'members' => $members ];
+}
+
+function localmeet_merge_users_func( $request ) {
+	$user     = new LocalMeet\User;
+	$group_id = (int) $request['group_id'];
+	$group    = ( new LocalMeet\Groups )->get( $group_id );
+	if ( ! $group || ! $user->can_manage_group( $group ) ) {
+		return [ 'errors' => [ 'Permission denied.' ] ];
+	}
+
+	$post = json_decode( file_get_contents( 'php://input' ) );
+	$keep_id  = (int) ( $post->keep_user_id ?? 0 );
+	$merge_id = (int) ( $post->merge_user_id ?? 0 );
+
+	if ( ! $keep_id || ! $merge_id ) {
+		return [ 'errors' => [ 'Both users must be selected.' ] ];
+	}
+	if ( $keep_id === $merge_id ) {
+		return [ 'errors' => [ 'Cannot merge a user into themselves.' ] ];
+	}
+	if ( $merge_id === get_current_user_id() ) {
+		return [ 'errors' => [ 'Cannot merge your own account.' ] ];
+	}
+
+	$keep_user  = get_userdata( $keep_id );
+	$merge_user = get_userdata( $merge_id );
+	if ( ! $keep_user || ! $merge_user ) {
+		return [ 'errors' => [ 'One or both users not found.' ] ];
+	}
+
+	global $wpdb;
+	$attendees_table = $wpdb->prefix . 'localmeet_attendees';
+	$members_table   = $wpdb->prefix . 'localmeet_members';
+	$comments_table  = $wpdb->prefix . 'localmeet_comments';
+	$groups_table    = $wpdb->prefix . 'localmeet_groups';
+	$invites_table   = $wpdb->prefix . 'localmeet_invites';
+
+	$wpdb->query( 'START TRANSACTION' );
+
+	// 1. Reassign attendees (skip duplicates)
+	$merge_attendees = $wpdb->get_results( $wpdb->prepare(
+		"SELECT attendee_id, event_id FROM {$attendees_table} WHERE user_id = %d", $merge_id
+	) );
+	foreach ( $merge_attendees as $att ) {
+		$conflict = $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$attendees_table} WHERE event_id = %d AND user_id = %d",
+			$att->event_id, $keep_id
+		) );
+		if ( $conflict ) {
+			$wpdb->delete( $attendees_table, [ 'attendee_id' => $att->attendee_id ] );
+		} else {
+			$wpdb->update( $attendees_table, [ 'user_id' => $keep_id ], [ 'attendee_id' => $att->attendee_id ] );
+		}
+	}
+
+	// 2. Reassign memberships (skip duplicates, keep earlier join date)
+	$merge_memberships = $wpdb->get_results( $wpdb->prepare(
+		"SELECT * FROM {$members_table} WHERE user_id = %d", $merge_id
+	) );
+	foreach ( $merge_memberships as $mem ) {
+		$keep_membership = $wpdb->get_row( $wpdb->prepare(
+			"SELECT * FROM {$members_table} WHERE user_id = %d AND group_id = %d",
+			$keep_id, $mem->group_id
+		) );
+		if ( $keep_membership ) {
+			// Use the earlier join date
+			if ( $mem->created_at < $keep_membership->created_at ) {
+				$wpdb->update( $members_table, [ 'created_at' => $mem->created_at ], [ 'user_id' => $keep_id, 'group_id' => $mem->group_id ] );
+			}
+			$wpdb->delete( $members_table, [ 'user_id' => $merge_id, 'group_id' => $mem->group_id ] );
+		} else {
+			$wpdb->update( $members_table, [ 'user_id' => $keep_id ], [ 'user_id' => $merge_id, 'group_id' => $mem->group_id ] );
+		}
+	}
+
+	// 3. Reassign comments
+	$wpdb->update( $comments_table, [ 'user_id' => $keep_id ], [ 'user_id' => $merge_id ] );
+
+	// 4. Transfer group ownership
+	$wpdb->update( $groups_table, [ 'owner_id' => $keep_id ], [ 'owner_id' => $merge_id ] );
+
+	// 5. Transfer invites
+	$wpdb->update( $invites_table, [ 'accepted_by' => $keep_id ], [ 'accepted_by' => $merge_id ] );
+
+	// 6. Clean up merged user's avatar (don't transfer — keep user's Gravatar or existing avatar is preferred)
+	$merge_avatar = get_user_meta( $merge_id, 'localmeet_avatar', true );
+	if ( $merge_avatar ) {
+		wp_delete_attachment( $merge_avatar, true );
+	}
+
+	// 7. Delete the merged user
+	require_once ABSPATH . 'wp-admin/includes/user.php';
+	wp_delete_user( $merge_id, $keep_id );
+
+	$wpdb->query( 'COMMIT' );
+
+	return [ 'success' => true, 'message' => "{$merge_user->display_name} merged into {$keep_user->display_name}." ];
 }

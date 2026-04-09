@@ -71,7 +71,7 @@
 				<div class="text-gray-500 dark:text-gray-400 text-sm">Members</div>
 			</a>
 			<a :href="groupLink('events')" @click.prevent="goToPath(groupLink('events')); group.show = 'list'" class="flex-1 text-center py-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors">
-				<div class="text-2xl font-bold" x-text="(group.past ? group.past.length : 0) + (group.upcoming ? group.upcoming.length : 0)"></div>
+				<div class="text-2xl font-bold" x-text="group.stats ? group.stats.events : (group.past_total || 0) + (group.upcoming_total || 0)"></div>
 				<div class="text-gray-500 dark:text-gray-400 text-sm">Events</div>
 			</a>
 		</div>
@@ -86,6 +86,10 @@
 				<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/></svg>
 				Edit Group
 			</button>
+			<button x-show="group.can_manage" @click="openMergeUsers()" class="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+					<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"/></svg>
+					Merge Users
+				</button>
 			<button x-show="group.is_member && !group.owner" @click="leaveGroup()" class="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
 				<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15"/></svg>
 				Leave Group
@@ -118,7 +122,7 @@
 						<div class="text-gray-500 dark:text-gray-400 text-sm">Members</div>
 					</a>
 					<a :href="groupLink('events')" @click.prevent="goToPath(groupLink('events')); group.show = 'list'; drawer = false" class="flex-1 text-center py-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors">
-						<div class="text-2xl font-bold" x-text="(group.past ? group.past.length : 0) + (group.upcoming ? group.upcoming.length : 0)"></div>
+						<div class="text-2xl font-bold" x-text="group.stats ? group.stats.events : (group.past_total || 0) + (group.upcoming_total || 0)"></div>
 						<div class="text-gray-500 dark:text-gray-400 text-sm">Events</div>
 					</a>
 				</div>
@@ -404,11 +408,11 @@
 							No upcoming events are scheduled.
 						</div>
 						<template x-for="evt in (group.upcoming || [])" :key="evt.event_id">
-							<a :href="groupLink(evt.slug)" @click.prevent="goToPath(groupLink(evt.slug))" class="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
-								<svg class="w-5 h-5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/></svg>
+							<a :href="groupLink(evt.slug)" @click.prevent="goToPath(groupLink(evt.slug))" class="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer border-l-2 border-primary-500">
+								<svg class="w-5 h-5 text-primary-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/></svg>
 								<div>
-									<div class="text-sm font-medium" x-text="prettyTimestamp(evt.event_at)"></div>
-									<div class="text-sm text-gray-500 dark:text-gray-400">
+									<div class="text-sm font-semibold" x-text="prettyTimestamp(evt.event_at)"></div>
+									<div class="text-sm text-gray-600 dark:text-gray-300">
 										<span x-text="evt.name"></span>
 										<span x-show="evt.cancelled_at" class="ml-1 text-xs font-medium text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded">Cancelled</span>
 									</div>
@@ -419,10 +423,10 @@
 							<button @click="loadMoreEvents('upcoming')" class="text-sm text-primary-600 dark:text-primary-400 hover:underline font-medium">Load more upcoming events</button>
 						</div>
 						<div x-show="group.past && group.past.length > 0" class="px-5 py-2 bg-gray-50 dark:bg-gray-700/50 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-							<span x-text="group.past ? group.past.length + ' ' : ''"></span>Past Events
+							<span x-text="(group.past_total || group.past.length) + ' '"></span>Past Events
 						</div>
 						<template x-for="evt in (group.past || [])" :key="evt.event_id">
-							<a :href="groupLink(evt.slug)" @click.prevent="goToPath(groupLink(evt.slug))" class="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
+							<a :href="groupLink(evt.slug)" @click.prevent="goToPath(groupLink(evt.slug))" class="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer opacity-60">
 								<svg class="w-5 h-5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/></svg>
 								<div>
 									<div class="text-sm font-medium" x-text="prettyTimestamp(evt.event_at)"></div>
@@ -486,8 +490,8 @@
 		</div>
 
 		<div x-show="route === 'event' && !event_loading" class="max-w-3xl mx-auto">
-			<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden my-4">
-				<div class="bg-primary-600 dark:bg-gray-700 px-6 py-3 flex items-center justify-between">
+			<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 my-4">
+				<div class="bg-primary-600 dark:bg-gray-700 px-6 py-3 flex items-center justify-between rounded-t-xl">
 					<h2 class="text-lg font-semibold text-white">
 						<span x-text="event.name"></span>
 						<span x-show="event.cancelled_at" class="ml-2 text-xs font-medium bg-red-500 text-white px-2 py-0.5 rounded">Cancelled</span>
@@ -511,7 +515,7 @@
 					<span x-show="event.is_full && attend_selection !== 'going'" class="text-sm font-medium text-red-600 dark:text-red-400">Event is full</span>
 					<div x-show="user.username && !(event.is_full && attend_selection !== 'going')" class="relative">
 						<button @click="attend_menu = !attend_menu" class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600">
-							RSVP
+							<span x-text="attend_selection === 'going' ? 'Going ✓' : attend_selection === 'not-going' ? 'Not Going' : 'RSVP'"></span>
 							<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/></svg>
 						</button>
 						<div x-show="attend_menu" @click.outside="attend_menu = false" x-transition class="absolute right-0 mt-1 w-36 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 z-10">
@@ -559,9 +563,9 @@
 						<h4 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3" x-text="event.status === 'upcoming' ? 'Going' : 'Went'"></h4>
 						<div class="space-y-2">
 							<template x-for="attendee in (event.attendees || [])" :key="attendee.attendee_id">
-								<div class="flex items-center gap-2">
+								<div class="flex items-center gap-2 group/attendee">
 									<img :src="attendee.avatar" class="w-9 h-9 rounded shrink-0">
-									<span class="text-sm truncate" x-text="attendee.name"></span>
+									<span class="text-sm truncate group-hover/attendee:overflow-visible group-hover/attendee:whitespace-nowrap group-hover/attendee:relative group-hover/attendee:z-50 group-hover/attendee:bg-white dark:group-hover/attendee:bg-gray-800 group-hover/attendee:pr-2" x-text="attendee.name"></span>
 									<span x-show="attendee.description" :title="attendee.description" class="ml-auto shrink-0">
 										<svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/></svg>
 									</span>
@@ -572,9 +576,9 @@
 							<h4 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mt-5 mb-3">Not Going</h4>
 							<div class="space-y-2">
 								<template x-for="attendee in (event.attendees_not || [])" :key="attendee.attendee_id">
-									<div class="flex items-center gap-2">
+									<div class="flex items-center gap-2 group/attendee">
 										<img :src="attendee.avatar" class="w-9 h-9 rounded shrink-0">
-										<span class="text-sm truncate" x-text="attendee.name"></span>
+										<span class="text-sm truncate group-hover/attendee:overflow-visible group-hover/attendee:whitespace-nowrap group-hover/attendee:relative group-hover/attendee:z-50 group-hover/attendee:bg-white dark:group-hover/attendee:bg-gray-800 group-hover/attendee:pr-2" x-text="attendee.name"></span>
 									</div>
 								</template>
 							</div>
@@ -583,7 +587,7 @@
 				</div>
 
 				<!-- Map -->
-				<div x-show="mapAddress(event.location)" class="border-t border-gray-200 dark:border-gray-700">
+				<div x-show="mapAddress(event.location)" class="border-t border-gray-200 dark:border-gray-700 rounded-b-xl overflow-hidden">
 					<iframe x-show="mapAddress(event.location)" :src="'https://maps.google.com/maps?q=' + encodeURIComponent(mapAddress(event.location)) + '&t=&z=15&ie=UTF8&iwloc=&output=embed'" style="height: 250px; width: 100%; border: 0;" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
 				</div>
 
@@ -1139,6 +1143,108 @@
 			</div>
 			<template x-for="error in group_join_request.errors">
 				<div class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-3 py-2 rounded-lg text-sm" x-text="error"></div>
+			</template>
+		</div>
+	</div>
+</div>
+
+<!-- Merge Users Modal -->
+<div x-show="merge_users.show" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="merge_users.show = false">
+	<div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+		<div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+			<h2 class="text-lg font-semibold">Merge Users</h2>
+			<button @click="merge_users.show = false" class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+				<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+			</button>
+		</div>
+		<div class="p-6 space-y-5">
+			<div x-show="merge_users.loading" class="flex justify-center py-8">
+				<svg class="w-6 h-6 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+			</div>
+			<template x-if="!merge_users.loading">
+				<div class="space-y-5">
+					<!-- Errors -->
+					<template x-for="error in merge_users.errors">
+						<div class="p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm" x-text="error"></div>
+					</template>
+
+					<!-- Duplicate candidates -->
+					<div x-show="merge_users.candidates.length > 0">
+						<h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Suggested Duplicates</h3>
+						<div class="space-y-2">
+							<template x-for="candidate in merge_users.candidates" :key="candidate.name">
+								<div class="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+									<div class="text-sm font-medium mb-2" x-text="candidate.name + ' (' + candidate.users.length + ' accounts)'"></div>
+									<div class="space-y-1.5">
+										<template x-for="u in candidate.users" :key="u.user_id">
+											<div class="flex items-center gap-2 text-sm">
+												<img :src="u.avatar" class="w-7 h-7 rounded shrink-0">
+												<span class="truncate" x-text="u.email"></span>
+												<span class="text-xs text-gray-400 shrink-0" x-text="'ID ' + u.user_id"></span>
+												<div class="ml-auto flex gap-1 shrink-0">
+													<button @click="merge_users.keep_user = u.user_id" class="px-2 py-0.5 text-xs rounded" :class="merge_users.keep_user == u.user_id ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 font-medium' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-green-50'">Keep</button>
+													<button @click="merge_users.merge_user = u.user_id" class="px-2 py-0.5 text-xs rounded" :class="merge_users.merge_user == u.user_id ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 font-medium' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-red-50'">Merge</button>
+												</div>
+											</div>
+										</template>
+									</div>
+								</div>
+							</template>
+						</div>
+					</div>
+
+					<!-- Manual selection -->
+					<div>
+						<h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Select Users</h3>
+						<div class="space-y-3">
+							<div>
+								<label class="block text-sm font-medium mb-1 text-green-700 dark:text-green-400">Keep this user</label>
+								<select x-model="merge_users.keep_user" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg text-sm dark:text-gray-100">
+									<option value="">Select user to keep...</option>
+									<template x-for="m in merge_users.members" :key="'keep-'+m.user_id">
+										<option :value="m.user_id" x-text="m.display_name + ' (' + m.email + ')'"></option>
+									</template>
+								</select>
+							</div>
+							<div>
+								<label class="block text-sm font-medium mb-1 text-red-700 dark:text-red-400">Merge and delete this user</label>
+								<select x-model="merge_users.merge_user" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg text-sm dark:text-gray-100">
+									<option value="">Select user to merge...</option>
+									<template x-for="m in merge_users.members.filter(m => m.user_id != merge_users.keep_user)" :key="'merge-'+m.user_id">
+										<option :value="m.user_id" x-text="m.display_name + ' (' + m.email + ')'"></option>
+									</template>
+								</select>
+							</div>
+						</div>
+					</div>
+
+					<!-- Preview -->
+					<div x-show="merge_users.keep_user && merge_users.merge_user">
+						<div class="border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+							<div class="p-3 flex items-center gap-3">
+								<img :src="merge_users.members.find(m => m.user_id == merge_users.keep_user)?.avatar" class="w-9 h-9 rounded shrink-0">
+								<div class="min-w-0">
+									<div class="text-sm font-medium truncate" x-text="merge_users.members.find(m => m.user_id == merge_users.keep_user)?.display_name"></div>
+									<div class="text-xs text-gray-500 truncate" x-text="merge_users.members.find(m => m.user_id == merge_users.keep_user)?.email"></div>
+								</div>
+								<span class="ml-auto text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded shrink-0">Keep</span>
+							</div>
+							<div class="p-3 flex items-center gap-3 bg-red-50/50 dark:bg-red-900/10">
+								<img :src="merge_users.members.find(m => m.user_id == merge_users.merge_user)?.avatar" class="w-9 h-9 rounded shrink-0">
+								<div class="min-w-0">
+									<div class="text-sm font-medium truncate" x-text="merge_users.members.find(m => m.user_id == merge_users.merge_user)?.display_name"></div>
+									<div class="text-xs text-gray-500 truncate" x-text="merge_users.members.find(m => m.user_id == merge_users.merge_user)?.email"></div>
+								</div>
+								<span class="ml-auto text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-2 py-0.5 rounded shrink-0">Delete</span>
+							</div>
+						</div>
+					</div>
+
+					<!-- Action -->
+					<button @click="executeMerge()" :disabled="!merge_users.keep_user || !merge_users.merge_user" class="w-full px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed">
+						Merge Users
+					</button>
+				</div>
 			</template>
 		</div>
 	</div>
