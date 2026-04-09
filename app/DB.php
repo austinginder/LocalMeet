@@ -228,7 +228,7 @@ class DB {
     // Perform LocalMeet database upgrades by running `LocalMeet\DB::upgrade();`
     public static function upgrade( $force = false ) {
 
-        $required_version = (int) "10";
+        $required_version = (int) "11";
         $version          = (int) get_site_option( 'localmeet_db_version' );
 
         if ( $version >= $required_version and $force != true ) {
@@ -309,6 +309,7 @@ class DB {
             recurrence_parent_id bigint(20) UNSIGNED,
             image_id bigint(20) UNSIGNED,
             cancelled_at datetime,
+            announced_at datetime,
             created_at datetime NOT NULL,
         PRIMARY KEY  (event_id)
         ) $charset_collate;";

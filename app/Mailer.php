@@ -235,14 +235,13 @@ class Mailer {
         }
     }
 
-    static public function announce_event( $event_id ) {
+    static public function build_announcement( $event_id ) {
         if ( ! function_exists( 'get_home_path' ) ) {
             include_once ABSPATH . '/wp-admin/includes/file.php';
         }
 
         $event      = ( new Event( $event_id ) )->fetch();
         $group      = new Group( $event->group_id );
-        $members    = $group->members();
         $group_data = $group->fetch();
         $home_path  = get_home_path();
         $path       = "{$home_path}invites/{$event->event_id}/";
@@ -263,7 +262,6 @@ class Mailer {
 
         $start      = new \Eluceo\iCal\Domain\ValueObject\DateTime( \DateTimeImmutable::createFromFormat( 'Y-m-d H:i:s', $event->event_at ), false );
         $end        = new \Eluceo\iCal\Domain\ValueObject\DateTime( \DateTimeImmutable::createFromFormat( 'Y-m-d H:i:s', $ends_at->format( "Y-m-d H:i:s" ) ), false );
-        $occurrence = new \Eluceo\iCal\Domain\ValueObject\TimeSpan( $start, $end );
 
         $organizer = new \Eluceo\iCal\Domain\ValueObject\Organizer(
             new \Eluceo\iCal\Domain\ValueObject\EmailAddress( $group_data->reply_to_email ),
@@ -302,24 +300,68 @@ class Mailer {
 
         $rsvp_button = self::action_button( $event_link, 'RSVP to Attend' );
 
-        $location_data = json_decode( $event->location );
-        if ( $location_data && is_object( $location_data ) ) {
-            $location_parts = array_filter( [ $location_data->name ?? '', $location_data->address ?? '' ] );
-            $location_display = implode( ' - ', $location_parts );
-        } else {
-            $location_display = $event->location ?? '';
-        }
-
         $location_name    = '';
         $location_address = '';
+        $location_data    = json_decode( $event->location );
         if ( $location_data && is_object( $location_data ) ) {
             $location_name    = $location_data->name ?? '';
             $location_address = $location_data->address ?? '';
         }
 
+        $location_html = '';
+        if ( $location_name ) {
+            $location_html .= "<tr><td style='padding: 4px 0; color: #718096; font-size: 14px; width: 24px; vertical-align: top;'>&#128205;</td><td style='padding: 4px 0; font-size: 15px; color: #2d3748; font-weight: 600;'>{$location_name}</td></tr>";
+        }
+        if ( $location_address ) {
+            $location_html .= "<tr><td style='padding: 0; width: 24px;'></td><td style='padding: 0 0 4px; font-size: 13px; color: #718096;'>{$location_address}</td></tr>";
+        }
+
+        $image_html = '';
+        if ( ! empty( $event->image_url ) ) {
+            $image_html = "<img src='{$event->image_url}' alt='" . esc_attr( $event->name ) . "' style='width: 100%; max-width: 600px; height: auto; border-radius: 8px; margin-bottom: 20px; display: block;'>";
+        }
+
+        $content_body = "
+            {$image_html}
+            <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color: #f7fafc; border-radius: 8px; margin-bottom: 24px;'>
+                <tr>
+                    <td style='padding: 20px 24px;'>
+                        <table role='presentation' border='0' cellpadding='0' cellspacing='0'>
+                            <tr>
+                                <td style='padding: 4px 0; color: #718096; font-size: 14px; width: 24px; vertical-align: top;'>&#128197;</td>
+                                <td style='padding: 4px 0; font-size: 15px; color: #2d3748; font-weight: 600;'>{$when}</td>
+                            </tr>
+                            {$location_html}
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            <p>Hi {greeting_name},</p>
+            {$event->description}
+            {$rsvp_button}
+            <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #edf2f7; font-size: 13px; color: #a0aec0;'>
+                <a href='{mute_link}' style='color: #a0aec0;'>Unsubscribe</a> &middot; <a href='{leave_link}' style='color: #a0aec0;'>Leave group</a>
+            </div>
+        ";
+
+        return [
+            'subject'      => $subject,
+            'content_body' => $content_body,
+            'attachments'  => $attachments,
+            'reply_to'     => $reply_to,
+            'event'        => $event,
+            'group_data'   => $group_data,
+        ];
+    }
+
+    static public function announce_event( $event_id ) {
+        $announcement = self::build_announcement( $event_id );
+        $group        = new Group( $announcement['event']->group_id );
+        $members      = $group->members();
+        $group_data   = $announcement['group_data'];
+
         foreach ( $members as $member ) {
-            // Skip members who muted email notifications
-            $member_record = ( new Members )->where( [ "user_id" => $member->user_id, "group_id" => $event->group_id, "active" => 1 ] );
+            $member_record = ( new Members )->where( [ "user_id" => $member->user_id, "group_id" => $announcement['event']->group_id, "active" => 1 ] );
             if ( ! empty( $member_record ) && property_exists( $member_record[0], 'email_notifications' ) && $member_record[0]->email_notifications == 0 ) {
                 continue;
             }
@@ -327,58 +369,44 @@ class Mailer {
             $token         = $member->member_id . "-" . wp_hash( $member->created_at );
             $leave_link    = home_url() . "/group/{$group_data->slug}/leave?token={$token}";
             $mute_link     = home_url() . "/wp-json/localmeet/v1/member/mute/{$token}";
-            $member_footer = str_replace( "[leave_group]", $leave_link, $group_data->email_footer );
-            $member_footer = str_replace( "[mute_emails]", $mute_link, $member_footer );
 
-            $full_name = trim( "{$member->first_name} {$member->last_name}" );
+            $full_name     = trim( "{$member->first_name} {$member->last_name}" );
             $greeting_name = $member->first_name ?: ( $full_name ?: 'there' );
 
-            $location_html = '';
-            if ( $location_name ) {
-                $location_html .= "<tr><td style='padding: 4px 0; color: #718096; font-size: 14px; width: 24px; vertical-align: top;'>&#128205;</td><td style='padding: 4px 0; font-size: 15px; color: #2d3748; font-weight: 600;'>{$location_name}</td></tr>";
-            }
-            if ( $location_address ) {
-                $location_html .= "<tr><td style='padding: 0; width: 24px;'></td><td style='padding: 0 0 4px; font-size: 13px; color: #718096;'>{$location_address}</td></tr>";
-            }
-
-            $image_html = '';
-            if ( ! empty( $event->image_url ) ) {
-                $image_html = "<img src='{$event->image_url}' alt='" . esc_attr( $event->name ) . "' style='width: 100%; max-width: 600px; height: auto; border-radius: 8px; margin-bottom: 20px; display: block;'>";
-            }
-
-            $content = "
-                {$image_html}
-                <table role='presentation' border='0' cellpadding='0' cellspacing='0' width='100%' style='background-color: #f7fafc; border-radius: 8px; margin-bottom: 24px;'>
-                    <tr>
-                        <td style='padding: 20px 24px;'>
-                            <table role='presentation' border='0' cellpadding='0' cellspacing='0'>
-                                <tr>
-                                    <td style='padding: 4px 0; color: #718096; font-size: 14px; width: 24px; vertical-align: top;'>&#128197;</td>
-                                    <td style='padding: 4px 0; font-size: 15px; color: #2d3748; font-weight: 600;'>{$when}</td>
-                                </tr>
-                                {$location_html}
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-                <p>Hi {$greeting_name},</p>
-                {$event->description}
-                {$rsvp_button}
-                <div style='margin-top: 30px; padding-top: 20px; border-top: 1px solid #edf2f7; font-size: 13px; color: #a0aec0;'>
-                    {$member_footer}
-                </div>
-            ";
+            $content = str_replace( '{greeting_name}', $greeting_name, $announcement['content_body'] );
+            $content = str_replace( '{leave_link}', $leave_link, $content );
+            $content = str_replace( '{mute_link}', $mute_link, $content );
 
             self::send_email_with_layout(
                 $member->email,
-                $subject,
-                $event->name,
+                $announcement['subject'],
+                $announcement['event']->name,
                 $group_data->name,
                 $content,
-                [ $reply_to ],
-                $attachments
+                [ $announcement['reply_to'] ],
+                $announcement['attachments']
             );
         }
+    }
+
+    static public function announce_event_preview( $event_id, $email ) {
+        $announcement  = self::build_announcement( $event_id );
+        $current_user  = wp_get_current_user();
+        $greeting_name = $current_user->first_name ?: 'there';
+
+        $content = str_replace( '{greeting_name}', $greeting_name, $announcement['content_body'] );
+        $content = str_replace( '{leave_link}', '#preview-leave', $content );
+        $content = str_replace( '{mute_link}', '#preview-mute', $content );
+
+        self::send_email_with_layout(
+            $email,
+            '[PREVIEW] ' . $announcement['subject'],
+            $announcement['event']->name,
+            $announcement['group_data']->name,
+            $content,
+            [ $announcement['reply_to'] ],
+            $announcement['attachments']
+        );
     }
 
     static public function send_role_notification( $email, $group_name, $role, $group_slug = '' ) {

@@ -37,7 +37,8 @@ class Event {
         $event->recurrence_parent_id = property_exists( $event, 'recurrence_parent_id' ) ? $event->recurrence_parent_id : null;
         $event->image_id     = ! empty( $event->image_id ) ? (int) $event->image_id : null;
         $event->image_url    = $event->image_id ? wp_get_attachment_image_url( $event->image_id, 'large' ) : null;
-        $event->cancelled_at = property_exists( $event, 'cancelled_at' ) ? $event->cancelled_at : null;
+        $event->cancelled_at  = property_exists( $event, 'cancelled_at' ) ? $event->cancelled_at : null;
+        $event->announced_at = property_exists( $event, 'announced_at' ) ? $event->announced_at : null;
         if ( $event->cancelled_at ) {
             $event->status = 'cancelled';
         }
