@@ -275,6 +275,14 @@ class Mailer {
                 new \Eluceo\iCal\Domain\ValueObject\TimeSpan( $start, $end )
             );
 
+        $location_data = json_decode( $event->location );
+        if ( $location_data && is_object( $location_data ) ) {
+            $parts = array_filter( [ $location_data->name ?? '', $location_data->address ?? '' ] );
+            if ( $parts ) {
+                $meetup->setLocation( new \Eluceo\iCal\Domain\ValueObject\Location( implode( ', ', $parts ) ) );
+            }
+        }
+
         $calendar = new \Eluceo\iCal\Domain\Entity\Calendar( [ $meetup ] );
         $timeZone = ( new \Eluceo\iCal\Domain\Entity\TimeZone( "timezone" ) )::createFromPhpDateTimeZone(
             $tz,
@@ -413,6 +421,18 @@ class Mailer {
             [ $announcement['reply_to'] ],
             $announcement['attachments']
         );
+    }
+
+    static public function send_password_reset( $email, $user_login, $reset_url ) {
+        $site_name = get_bloginfo( 'name' );
+        $button    = self::action_button( $reset_url, 'Reset Password' );
+        $content   = "
+            <p>Someone has requested a password reset for the account associated with <strong>{$user_login}</strong>.</p>
+            <p>Click the button below to choose a new password:</p>
+            {$button}
+            <p style='font-size: 13px; color: #a0aec0;'>If you didn't request this, you can safely ignore this email. Your password will not be changed.</p>
+        ";
+        self::send_email_with_layout( $email, "{$site_name} - Password Reset", 'Reset Your Password', $site_name, $content );
     }
 
     static public function send_role_notification( $email, $group_name, $role, $group_slug = '' ) {

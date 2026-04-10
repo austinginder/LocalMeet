@@ -620,25 +620,9 @@ function localmeet_login_func( WP_REST_Request $request ) {
 			return $key;
 		}
 	
-		if ( is_multisite() ) {
-			$site_name = get_network()->site_name;
-		} else {
-			$site_name = wp_specialchars_decode( get_option( 'blogname' ), ENT_QUOTES );
-		}
-	
-		$message = __( 'Someone has requested a password reset for the following account:' ) . "\r\n\r\n";
-		$message .= sprintf( __( 'Site Name: %s' ), $site_name ) . "\r\n\r\n";
-		$message .= sprintf( __( 'Username: %s' ), $user_login ) . "\r\n\r\n";
-		$message .= __( 'If this was a mistake, just ignore this email and nothing will happen.' ) . "\r\n\r\n";
-		$message .= __( 'To reset your password, visit the following address:' ) . "\r\n\r\n";
-		$message .= '<' . network_site_url( "wp-login.php?action=rp&key=$key&login=" . rawurlencode( $user_login ), 'login' ) . ">\r\n";
-		$title   = sprintf( __( '[%s] Password Reset' ), $site_name );
-		$title   = apply_filters( 'retrieve_password_title', $title, $user_login, $user_data );
-		$message = apply_filters( 'retrieve_password_message', $message, $key, $user_login, $user_data );
-	
-		if ( $message && ! wp_mail( $user_email, wp_specialchars_decode( $title ), $message ) ) {
-			wp_die( __( 'The email could not be sent.' ) . "<br />\n" . __( 'Possible reason: your host may have disabled the mail() function.' ) );
-		}
+		$reset_url = network_site_url( "wp-login.php?action=rp&key=$key&login=" . rawurlencode( $user_login ), 'login' );
+		LocalMeet\Mailer::send_password_reset( $user_email, $user_login, $reset_url );
+		return [ "success" => true ];
 
 	}
 
