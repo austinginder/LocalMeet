@@ -2471,7 +2471,7 @@ function localmeet_merge_users_candidates_func( $request ) {
 	$user     = new LocalMeet\User;
 	$group_id = (int) $request['group_id'];
 	$group    = ( new LocalMeet\Groups )->get( $group_id );
-	if ( ! $group || ! $user->can_manage_group( $group ) ) {
+	if ( ! $group || ! $user->is_admin() ) {
 		return [ 'errors' => [ 'Permission denied.' ] ];
 	}
 
@@ -2515,7 +2515,7 @@ function localmeet_merge_users_func( $request ) {
 	$user     = new LocalMeet\User;
 	$group_id = (int) $request['group_id'];
 	$group    = ( new LocalMeet\Groups )->get( $group_id );
-	if ( ! $group || ! $user->can_manage_group( $group ) ) {
+	if ( ! $group || ! $user->is_admin() ) {
 		return [ 'errors' => [ 'Permission denied.' ] ];
 	}
 

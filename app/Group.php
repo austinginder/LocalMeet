@@ -30,6 +30,7 @@ class Group {
             $group->owner = true;
         }
         $group->can_manage = $user_obj->can_manage_group( $group );
+        $group->is_admin   = $user_obj->is_admin();
         $group->is_member = false;
         $group->email_notifications = true;
         if ( $user->user_id != 0 && in_array( $user->user_id, $member_ids ) ) {
